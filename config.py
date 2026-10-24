@@ -1,31 +1,32 @@
-"""All constants of the experiment in one place."""
+# Settings of the experiment, all in one place.
 
-N_CONTROL = 5          # trials in the control block
-N_PENALTY = 10         # trials in each penalty block
+N_CONTROL = 5          # games in the normal block
+N_PENALTY = 10         # games in each penalty block
 POINTS_WIN = 100       # points for finding the trophy
-PENALTY = 25           # deducted when the penalised option wins
+PENALTY = 25           # taken off when you win with the penalised option
 
-MODE = "pilot"         # "pilot" or "real" -- decides the data folder
-APP_VERSION = "0.1.0"
-CONTACT_FORM_URL = ""  # separate contact form, filled in by Joo-Ran
-# Off by default: a debrief that says "switching wins 2 of 3" can spread to
-# people who have not played yet. Better: send it after data collection.
+MODE = "pilot"         # "pilot" or "real" - decides the data folder
+APP_VERSION = "0.2.0"
+CONTACT_FORM_URL = ""  # link to the separate contact form
+
+# Off for now: if the end screen says "switching wins 2 of 3", people could
+# tell friends who haven't played yet. Better to send it after data collection.
 SHOW_DEBRIEF = False
 
 DOORS = (1, 2, 3)
 
-# Block codes as saved in the data
+# block names as they are saved in the data
 CONTROL = "control"
-PEN_SWITCH = "pen_switch"   # switching is penalised
-PEN_STAY = "pen_stay"       # staying is penalised
+PEN_SWITCH = "pen_switch"   # switching costs 25 points
+PEN_STAY = "pen_stay"       # staying costs 25 points
 BLOCKS = (CONTROL, PEN_SWITCH, PEN_STAY)
 
-# Order of blocks per sequence
+# order of the blocks in each sequence
 SEQUENCES = {
     "A": (CONTROL, PEN_SWITCH, PEN_STAY),
     "B": (CONTROL, PEN_STAY, PEN_SWITCH),
 }
 
-# Personal code: no 0/O, 1/I/L to avoid confusion
+# personal code: no 0/O, 1/I/L so nobody mixes them up
 CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
 CODE_LENGTH = 6

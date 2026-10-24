@@ -1,13 +1,10 @@
-"""Turn all participant JSON files of one mode into two CSV files.
+"""Turns all participant files of one folder into two tables (CSV).
 
-Usage:
-    python export.py <folder with the JSON files> [output folder]
+Use:      python export.py <folder with the JSON files> [output folder]
+Example:  python export.py montyhall-data-main/data/real out/
 
-Example (after downloading the data repo):
-    python export.py montyhall-data/data/real out/
-
-Writes trials.csv (one row per trial) and participants.csv (one row per
-participant, incl. dropouts with completed = False).
+trials.csv       = one row per game
+participants.csv = one row per person (dropouts too, completed = False)
 """
 
 import csv

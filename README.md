@@ -5,6 +5,7 @@
 |---|---|
 | `app.py` | the screens (Streamlit) |
 | `texts.py` | **all participant texts**: edit wording here only |
+| `style.py` | colours, font and the look of the doors |
 | `config.py` | constants: trials, points, `MODE`, `CONTACT_FORM_URL`, `SHOW_DEBRIEF` |
 | `game.py` | game rules (host, points, sequence, code) |
 | `session.py` | participant record, order of screens, resume after refresh |

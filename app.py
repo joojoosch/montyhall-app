@@ -1,10 +1,10 @@
-"""Monty Hall experiment: screens. Run locally with:  streamlit run app.py
-
-All logic lives in game.py / session.py / storage.py; this file only shows
-screens and reacts to buttons. Every button uses a callback that first checks
-that the participant is still on the screen the button belongs to, so a
-double click can never advance twice.
-"""
+# Monty Hall experiment - the screens.
+# Run locally with:  streamlit run app.py
+#
+# The game rules are in game.py, the order of screens in session.py and the
+# saving in storage.py. This file only draws screens and handles buttons.
+# Every button calls a function that first checks we are still on the right
+# screen, so a double click can't skip anything.
 
 import sys
 import time
@@ -14,22 +14,24 @@ import streamlit as st
 import config
 import game
 import session as sess
+import style
 import texts
 from storage import make_storage
 
 st.set_page_config(page_title=texts.TITLE, page_icon="🚪", layout="centered",
                    initial_sidebar_state="collapsed")
-st.markdown(texts.CSS, unsafe_allow_html=True)
+st.markdown(style.CSS, unsafe_allow_html=True)
 S = st.session_state
 
 
-# ---------------------------------------------------------------- helpers
+# ---------- helpers ----------
 
 def get_storage():
+    # GitHub if the secrets are set, otherwise a local folder (for testing)
     if "storage" not in S:
         try:
             secrets = dict(st.secrets)
-        except Exception:  # no secrets file: local saving
+        except Exception:
             secrets = {}
         S.storage = make_storage(secrets)
     return S.storage
@@ -39,18 +41,22 @@ def save():
     ok = get_storage().save(S.rec)
     S.last_save_ok = ok
     if not ok:
-        print(f"[app] SAVE FAILED for {S.rec['participant_id']} at {S.rec['step']}",
+        print(f"[app] SAVE FAILED {S.rec['participant_id']} at {S.rec['step']}",
               file=sys.stderr, flush=True)
     return ok
 
 
+def current_step():
+    return S.rec["step"] if S.rec else "consent"
+
+
 def set_msg(text):
-    S.msg = (S.rec["step"] if S.rec else "consent", text)
+    # error message that only shows on the screen where it happened
+    S.msg = (current_step(), text)
 
 
 def show_msg():
-    step = S.rec["step"] if S.rec else "consent"
-    if S.get("msg") and S.msg[0] == step:
+    if S.get("msg") and S.msg[0] == current_step():
         st.error(S.msg[1])
 
 
@@ -59,29 +65,31 @@ def on_step(expected):
 
 
 def go_next(expected):
-    """Advance to the next step if still on `expected`."""
     if on_step(expected):
         sess.advance(S.rec)
         S.msg = None
         S.need_save = True
 
 
-def doors_html(states, final=None):
-    parts = []
-    for d in config.DOORS:
-        state = states[d]
-        icon, label = texts.DOOR_LABELS[state]
-        label = label.format(d=d) + (texts.FINAL_MARK if final == d else "")
-        cls = "door"
-        if state == "picked" or final == d:
-            cls += " picked"
-        if state in ("opened", "empty"):
-            cls += " opened"
-        parts.append(f'<div class="{cls}"><div class="big">{icon}</div><div>{label}</div></div>')
-    st.markdown('<div class="doors">' + "".join(parts) + "</div>", unsafe_allow_html=True)
+def html(code):
+    st.markdown(code, unsafe_allow_html=True)
 
 
-# ---------------------------------------------------------------- start-up
+def progress_bar():
+    # rough progress through the whole study (screens + games)
+    order = sess.steps(S.rec["mode"])
+    done = order.index(S.rec["step"]) + len(S.rec["trials"])
+    html(style.progress(done / (len(order) + game.total_trials())))
+
+
+def doors_row(states, tags):
+    # three doors next to each other, each with a small label underneath
+    for col, d in zip(st.columns(3), config.DOORS):
+        with col:
+            html(style.door(d, states[d], tags.get(d, "")))
+
+
+# ---------- start: new participant or coming back after a refresh ----------
 
 def init():
     if S.get("init"):
@@ -92,7 +100,7 @@ def init():
     S.need_save = False
     S.last_save_ok = True
     S.msg = None
-    # Resume after refresh / phone sleep: the ID is in the URL.
+    # the ID is in the URL, so after a refresh we can load the saved file
     pid = st.query_params.get("pid")
     seq = st.query_params.get("seq")
     if pid and seq in ("A", "B"):
@@ -104,61 +112,63 @@ def init():
                 S.need_save = True
 
 
-def guard_real_mode():
-    if config.MODE != "real":
-        if config.MODE != "pilot":
-            st.error("config.MODE must be 'pilot' or 'real'.")
-            st.stop()
-        st.caption(f"PILOT MODE · saving: {get_storage().kind}")
+def check_mode():
+    # pilot: small note at the top. real: refuse to run if something is missing
+    if config.MODE == "pilot":
+        st.caption(f"Pilot mode · saving to {get_storage().kind}")
         return
+    if config.MODE != "real":
+        st.error("config.MODE must be 'pilot' or 'real'.")
+        st.stop()
     problems = texts.placeholders_left()
     if get_storage().kind != "github":
-        problems.append("GitHub secrets missing: data would not be saved")
+        problems.append("GitHub secrets missing")
     if problems:
-        st.error("The study is not ready yet. Please try again later.")
+        st.error("The study isn't open yet. Please try again later.")
         print(f"[app] real mode blocked: {problems}", file=sys.stderr, flush=True)
         st.stop()
 
 
-# ---------------------------------------------------------------- 1. consent
+# ---------- 1. consent ----------
 
 def on_consent():
     if S.rec is not None or not S.get("consent_cb"):
         return
+    # balanced: give the sequence that has fewer participants so far
     seq = game.assign_sequence(get_storage().count_sequences(config.MODE))
     S.rec = sess.new_record(game.make_code(), config.MODE, seq)
-    S.need_save = True
+    S.need_save = True  # the file is created right after consent
 
 
 def screen_consent():
     st.title(texts.TITLE)
     st.markdown(texts.CONSENT_TEXT)
-    st.warning(texts.NO_REFRESH)
+    st.info(texts.NO_REFRESH)
     agreed = st.checkbox(texts.CONSENT_CHECKBOX, key="consent_cb")
-    st.button(texts.CONTINUE, disabled=not agreed, on_click=on_consent)
+    st.button(texts.CONTINUE, key="go_consent", disabled=not agreed, on_click=on_consent)
 
 
-# ---------------------------------------------------------------- 2. prize
+# ---------- 2. prize ----------
 
 def screen_prize():
-    st.subheader("How you can win")
+    st.header(texts.PRIZE_HEADER)
     st.markdown(texts.PRIZE_TEXT)
-    st.button(texts.CONTINUE, on_click=go_next, args=("prize",))
+    st.button(texts.CONTINUE, key="go_prize", on_click=go_next, args=("prize",))
 
 
-# ---------------------------------------------------------------- rules + comprehension
+# ---------- rules + comprehension check before each block ----------
 
 def on_comp(idx):
     step = f"rules_{idx}"
     if not on_step(step):
         return
-    block, _, _ = sess.block_info(S.rec, idx)
+    block = sess.block_info(S.rec, idx)[0]
     questions = texts.COMPREHENSION[block]
     answers = {q["id"]: S.get(f"comp_{idx}_{q['id']}") for q in questions}
-    if any(a is None for a in answers.values()):
+    if None in answers.values():
         set_msg(texts.COMP_MISSING)
         return
-    if sess.check_comprehension(S.rec, block, questions, answers):
+    if sess.check_comprehension(S.rec, block, questions, answers):  # also logs wrong answers
         S.trial = None
         go_next(step)
     else:
@@ -167,21 +177,24 @@ def on_comp(idx):
 
 def screen_rules(idx):
     block, order, _ = sess.block_info(S.rec, idx)
-    st.subheader("The rules" if idx == 0 else f"Part {idx + 1}: new rules")
+    st.header(texts.rules_header(idx))
     st.markdown(texts.rules_for(block, order))
-    st.markdown(f"**{texts.COMP_HEADER}**")
+    st.subheader(texts.COMP_HEADER)
     with st.form(f"comp_form_{idx}", border=False):
         for q in texts.COMPREHENSION[block]:
+            # index=None: nothing is pre-selected
             st.radio(q["q"], q["options"], index=None, horizontal=True,
                      key=f"comp_{idx}_{q['id']}")
         st.form_submit_button(texts.COMP_SUBMIT, on_click=on_comp, args=(idx,))
     show_msg()
 
 
-# ---------------------------------------------------------------- trials
+# ---------- the games ----------
+# One game has three phases: pick -> decide (stay/switch) -> feedback.
 
 def new_trial(idx):
     S.trial = {
+        # unique id, so buttons from an old game can't act on a new one
         "id": f"{idx}-{len(S.rec['trials'])}-{S.rec['resume_count']}",
         "idx": idx,
         "k": sess.trials_done_in_block(S.rec, idx) + 1,
@@ -215,7 +228,7 @@ def on_choice(tid, choice):
     t["result"] = sess.record_trial(S.rec, t["idx"], t["trophy"], t["pick"], t["opened"],
                                     choice, t["t_pick_ms"], t_dec)
     t["phase"] = "feedback"
-    S.need_save = True  # save after every trial
+    S.need_save = True  # save after every game, so a refresh loses nothing
 
 
 def on_next_trial(tid):
@@ -232,47 +245,40 @@ def screen_block(idx):
     if S.trial is None or S.trial["idx"] != idx:
         new_trial(idx)
     t = S.trial
-    st.markdown(f'<div class="counter">{texts.counter(t["k"], n, S.rec["total_points"])}</div>',
-                unsafe_allow_html=True)
+    html(f'<div class="gamebar"><span>{texts.counter(t["k"], n)}</span>'
+         f'<span class="pts">{texts.total(S.rec["total_points"])}</span></div>')
 
     if t["phase"] == "pick":
-        doors_html({d: "closed" for d in config.DOORS})
-        st.markdown(f'<div class="payoff">{texts.PICK_PROMPT}</div>', unsafe_allow_html=True)
-        cols = st.columns(3)
-        for col, d in zip(cols, config.DOORS):
+        doors_row({d: "closed" for d in config.DOORS}, {})
+        html(f'<div class="prompt">{texts.PICK_PROMPT}</div>')
+        for col, d in zip(st.columns(3), config.DOORS):
             col.button(f"Door {d}", key=f"pick_{t['id']}_{d}", on_click=on_pick, args=(t["id"], d))
 
     elif t["phase"] == "decide":
         other = game.remaining_door(t["pick"], t["opened"])
         states = {d: "closed" for d in config.DOORS}
-        states[t["pick"]] = "picked"
-        states[t["opened"]] = "opened"
-        doors_html(states)
-        st.markdown(f'<div class="payoff">{texts.DECIDE_PROMPT.format(opened=t["opened"])}'
-                    f'<br><b>{texts.PAYOFFS[block]}</b></div>', unsafe_allow_html=True)
-        left, right = st.columns(2)  # fixed order: Stay left, Switch right
+        states[t["opened"]] = "open"
+        doors_row(states, {t["pick"]: texts.TAG_PICK})
+        html(f'<div class="prompt">{texts.DECIDE_PROMPT.format(opened=t["opened"])}</div>'
+             f'<div class="payoffs">{"<br>".join(texts.PAYOFFS[block])}</div>')
+        left, right = st.columns(2)  # Stay always left, Switch always right
         left.button(texts.STAY_BUTTON.format(door=t["pick"]), key=f"stay_{t['id']}",
                     on_click=on_choice, args=(t["id"], "stay"))
         right.button(texts.SWITCH_BUTTON.format(door=other), key=f"switch_{t['id']}",
                      on_click=on_choice, args=(t["id"], "switch"))
 
-    else:  # feedback
+    else:  # feedback: show what was behind every door
         r = t["result"]
-        states = {d: ("trophy" if d == t["trophy"] else "empty") for d in config.DOORS}
-        doors_html(states, final=r["final_door"])
-        if r["won"]:
-            st.success(texts.WIN)
-        else:
-            st.info(texts.LOSE.format(door=t["trophy"]))
-        lines = [texts.TRIAL_POINTS.format(points=r["points"])]
-        if r["penalty_applied"]:
-            lines.append(texts.PENALTY_NOTE)
-        lines.append(f"**{texts.NEW_TOTAL.format(total=S.rec['total_points'])}**")
-        st.markdown("  \n".join(lines))
-        st.button(texts.NEXT, key=f"next_{t['id']}", on_click=on_next_trial, args=(t["id"],))
+        states = {d: ("trophy" if d == t["trophy"] else "open") for d in config.DOORS}
+        doors_row(states, {r["final_door"]: f"<b>{texts.TAG_FINAL}</b>"})
+        head = texts.WIN if r["won"] else texts.LOSE.format(door=t["trophy"])
+        note = f'<div class="note">{texts.PENALTY_NOTE}</div>' if r["penalty_applied"] else ""
+        html(f'<div class="result"><div class="head">{head}</div>'
+             f'<div class="pts">{texts.TRIAL_POINTS.format(points=r["points"])}</div>{note}</div>')
+        st.button(texts.NEXT, key=f"go_next_{t['id']}", on_click=on_next_trial, args=(t["id"],))
 
 
-# ---------------------------------------------------------------- beliefs
+# ---------- belief question (after the control block and at the end) ----------
 
 def on_belief(num):
     step = f"belief_{num}"
@@ -289,30 +295,30 @@ def on_belief(num):
 
 
 def screen_belief(num):
-    st.subheader("A short question")
+    st.header(texts.BELIEF_HEADER)
     st.markdown(texts.BELIEF_QUESTION)
+    # value=None: empty field, so nobody is anchored on a default number
     st.number_input(texts.BELIEF_LABEL, min_value=0, max_value=100, step=1, value=None,
                     placeholder="0 to 100", key=f"belief_in_{num}")
-    st.button(texts.NEXT, key=f"belief_next_{num}", on_click=on_belief, args=(num,))
+    st.button(texts.NEXT, key=f"go_belief_{num}", on_click=on_belief, args=(num,))
     show_msg()
 
 
-# ---------------------------------------------------------------- prior knowledge, demographics
+# ---------- prior knowledge and demographics ----------
 
 def on_prior():
     if not on_step("prior"):
         return
-    answer = S.get("prior_in")
-    if answer is None:
+    if S.get("prior_in") is None:
         set_msg(texts.PRIOR_MISSING)
         return
-    S.rec["prior_knowledge"] = answer
+    S.rec["prior_knowledge"] = S.prior_in
     go_next("prior")
 
 
 def screen_prior():
     st.radio(texts.PRIOR_QUESTION, texts.PRIOR_OPTIONS, index=None, key="prior_in")
-    st.button(texts.NEXT, key="prior_next", on_click=on_prior)
+    st.button(texts.NEXT, key="go_prior", on_click=on_prior)
     show_msg()
 
 
@@ -322,18 +328,18 @@ def on_demo():
     S.rec["age"] = S.get("age_in")
     S.rec["gender"] = S.get("gender_in")
     S.rec["student_status"] = S.get("student_in")
-    field = (S.get("field_in") or "").strip()
-    S.rec["field_of_study"] = field or None
+    S.rec["field_of_study"] = (S.get("field_in") or "").strip() or None
     go_next("demo")
 
 
 def screen_demo():
-    st.markdown(texts.DEMO_HEADER)
+    st.header(texts.DEMO_HEADER)
+    st.caption(texts.DEMO_NOTE)
     st.number_input(texts.AGE_LABEL, min_value=15, max_value=99, step=1, value=None, key="age_in")
     st.radio(texts.GENDER_LABEL, texts.GENDER_OPTIONS, index=None, key="gender_in")
     st.radio(texts.STUDENT_LABEL, texts.STUDENT_OPTIONS, index=None, key="student_in")
     st.text_input(texts.FIELD_LABEL, max_chars=60, key="field_in")
-    st.button(texts.CONTINUE, key="demo_next", on_click=on_demo)
+    st.button(texts.CONTINUE, key="go_demo", on_click=on_demo)
 
 
 def on_pilot_fb():
@@ -345,10 +351,10 @@ def on_pilot_fb():
 
 def screen_pilot_fb():
     st.text_area(texts.PILOT_QUESTION, max_chars=2000, key="pilot_in")
-    st.button(texts.CONTINUE, key="pilot_next", on_click=on_pilot_fb)
+    st.button(texts.CONTINUE, key="go_pilot", on_click=on_pilot_fb)
 
 
-# ---------------------------------------------------------------- end
+# ---------- end ----------
 
 def on_retry():
     S.need_save = True
@@ -356,37 +362,38 @@ def on_retry():
 
 def screen_end():
     link = config.CONTACT_FORM_URL or "[link missing]"
-    st.subheader("Thank you!")
-    st.markdown(texts.END_TEXT.format(points=S.rec["total_points"],
-                                      code=S.rec["participant_id"], link=link))
+    st.header(texts.END_HEADER)
+    st.markdown(texts.END_POINTS.format(points=S.rec["total_points"]))
+    st.caption(texts.END_CODE_LABEL)
+    html(f'<div class="code">{S.rec["participant_id"]}</div>')
+    st.markdown(texts.END_TEXT.format(link=link))
     if config.SHOW_DEBRIEF:
         st.info(texts.DEBRIEF)
     if not S.last_save_ok:
         st.error(texts.END_SAVE_FAILED)
-        st.button(texts.END_RETRY, on_click=on_retry)
+        st.button(texts.END_RETRY, key="go_retry", on_click=on_retry)
 
 
-# ---------------------------------------------------------------- main
+# ---------- main ----------
 
 def main():
     init()
-    guard_real_mode()
-    rec = S.rec
-
-    if rec is None:
+    check_mode()
+    if S.rec is None:
         screen_consent()
         return
 
-    # keep the ID in the URL so a refresh can resume
-    if st.query_params.get("pid") != rec["participant_id"]:
-        st.query_params["pid"] = rec["participant_id"]
-        st.query_params["seq"] = rec["sequence"]
+    # keep the ID in the URL so a refresh can continue where it stopped
+    if st.query_params.get("pid") != S.rec["participant_id"]:
+        st.query_params["pid"] = S.rec["participant_id"]
+        st.query_params["seq"] = S.rec["sequence"]
 
-    step = rec["step"]
-    if step == "end" and S.need_save:  # final save before showing the result
+    step = S.rec["step"]
+    if step == "end" and S.need_save:  # last save before the thank-you screen
         S.need_save = False
         save()
 
+    progress_bar()
     if step == "prize":
         screen_prize()
     elif step.startswith("rules_"):
@@ -404,7 +411,7 @@ def main():
     elif step == "end":
         screen_end()
 
-    # Save after the screen is drawn, so the participant does not wait for it.
+    # save after drawing the screen, so nobody waits for GitHub
     if S.need_save:
         S.need_save = False
         if not save():

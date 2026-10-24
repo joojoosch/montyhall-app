@@ -1,4 +1,4 @@
-"""Tests for game.py. Run with:  pytest -q"""
+# Tests for game.py. Run with:  pytest -q
 
 import os
 import random

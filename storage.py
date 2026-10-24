@@ -1,12 +1,10 @@
-"""Saving participant files, either locally or to the private GitHub data repo.
-
-File path: data/{mode}/{participant_id}_{sequence}.json
-The sequence is in the file name so the app can balance A and B by listing
-one folder (one API call) instead of opening every file.
-
-Every save writes the whole record, so if one save fails the next successful
-save contains everything again.
-"""
+# Saving the participant files: to the private GitHub data repo, or to a
+# local folder when testing on my own computer.
+#
+# File name: data/{mode}/{code}_{sequence}.json
+# The sequence is in the name so I can count A and B with one request.
+# Every save writes the whole file, so if one save fails, the next one
+# contains everything again.
 
 import base64
 import json
@@ -38,7 +36,7 @@ def _log(msg):
 
 
 class LocalStorage:
-    """For testing on your own computer. Never used in real mode."""
+    # for testing on my computer (real mode refuses to run with this)
 
     kind = "local"
 
@@ -72,12 +70,9 @@ class LocalStorage:
 
 
 class GitHubStorage:
-    """Private data repo via the GitHub contents API.
-
-    GitHub warns that parallel writes to the same repo can conflict (409).
-    So: retry with random, growing waits, and re-read the file's sha when
-    GitHub says it is out of date.
-    """
+    # Writes files into the private repo through the GitHub API.
+    # GitHub says writes at the same moment can clash (error 409), so I retry
+    # with random waits and fetch the file's current version id (sha) if needed.
 
     kind = "github"
 
@@ -96,7 +91,7 @@ class GitHubStorage:
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": API_VERSION,
         }
-        self._sha = {}  # path -> latest known blob sha
+        self._sha = {}  # file -> current version id, needed to update a file
 
     def _url(self, path):
         return f"{API}/repos/{self.repo}/contents/{path}"
@@ -112,7 +107,7 @@ class GitHubStorage:
                 self._sha[path] = r.json()["sha"]
             elif r.status_code == 404:
                 self._sha.pop(path, None)
-        except Exception as e:  # network problem: keep old sha, retry later
+        except Exception as e:  # network problem, just try again later
             _log(f"sha refresh failed for {path}: {e}")
 
     def save(self, rec):
@@ -136,10 +131,10 @@ class GitHubStorage:
             if status is not None:
                 _log(f"attempt {attempt}: HTTP {status} for {path}")
             if status in (401, 404):
-                # wrong token or repo name: retrying will not help
+                # wrong token or repo name, retrying won't help
                 return False
             if status in (409, 422):
-                # conflict, or our sha is outdated / missing: get the current one
+                # clash or outdated version id: get the current one and retry
                 self._refresh_sha(path)
             if attempt < self.max_attempts:
                 self.sleep(random.uniform(0.5, 1.5) * attempt)
@@ -165,11 +160,11 @@ class GitHubStorage:
                 return count_from_names(item["name"] for item in r.json())
         except Exception as e:
             _log(f"count failed: {e}")
-        return {"A": 0, "B": 0}  # folder missing or error: random assignment
+        return {"A": 0, "B": 0}  # no folder yet or error -> random sequence
 
 
 def make_storage(secrets):
-    """GitHub storage if the secrets are set, otherwise local storage."""
+    # GitHub if the secrets are set, otherwise local
     try:
         token = secrets["GITHUB_TOKEN"]
         repo = secrets["DATA_REPO"]

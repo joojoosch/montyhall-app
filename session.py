@@ -1,9 +1,8 @@
-"""The participant record and the order of steps. Pure Python, no Streamlit.
-
-The whole participant file is one dict (`rec`). `rec["step"]` is the screen
-the participant is on; after a refresh the app reloads the file and goes back
-to that step (inside a block: the next unplayed trial).
-"""
+# The participant file and the order of the screens.
+#
+# Everything about one participant is in one dict called `rec` (= the JSON file).
+# rec["step"] says which screen they are on. After a refresh the app loads the
+# file again and continues there (in a block: with the next game not played yet).
 
 import time
 from datetime import datetime, timezone
@@ -17,7 +16,7 @@ def now_iso():
 
 
 def steps(mode):
-    """Screens in order (after consent and before the end screen)."""
+    # screens after consent, in order
     s = ["prize", "rules_0", "block_0", "belief_1", "rules_1", "block_1",
          "rules_2", "block_2", "belief_2", "prior", "demo"]
     if mode == "pilot":
@@ -54,7 +53,7 @@ def new_record(pid, mode, sequence):
 
 
 def advance(rec):
-    """Move to the next step. Returns the new step."""
+    # go to the next screen; reaching "end" marks the participant as completed
     order = steps(rec["mode"])
     i = order.index(rec["step"])
     rec["step"] = order[min(i + 1, len(order) - 1)]
@@ -66,12 +65,12 @@ def advance(rec):
 
 
 def block_index(step):
-    """'block_1' / 'rules_1' -> 1."""
+    # 'block_1' or 'rules_1' -> 1
     return int(step.split("_")[1])
 
 
 def block_info(rec, idx):
-    """(block, block_order, n_trials) for block number idx (0-2)."""
+    # (block, block_order, number of games) for block 0, 1 or 2
     return game.block_plan(rec["sequence"])[idx]
 
 
@@ -81,7 +80,7 @@ def trials_done_in_block(rec, idx):
 
 
 def record_trial(rec, idx, trophy, pick, opened, choice, t_pick_ms, t_decision_ms):
-    """Resolve a trial, append it to the record and return it."""
+    # work out the result of a game and add it to the file
     block, order, n = block_info(rec, idx)
     res = game.resolve_trial(block, trophy, pick, opened, choice)
     rec["total_points"] += res["points"]
@@ -110,10 +109,7 @@ def block_finished(rec, idx):
 
 
 def check_comprehension(rec, block, questions, answers):
-    """Log one attempt. Returns True if all answers are correct.
-
-    `answers` maps question id -> chosen option (None if unanswered).
-    """
+    # log one attempt (and every wrong answer); True if all answers are right
     log = rec["comprehension"][block]
     log["attempts"] += 1
     ok = True
@@ -126,10 +122,10 @@ def check_comprehension(rec, block, questions, answers):
 
 
 def mark_resumed(rec):
-    """Called when a saved, unfinished record is reloaded after a refresh."""
+    # called when an unfinished file is loaded again after a refresh
     rec["resumed"] = True
     rec["resume_count"] += 1
-    # A finished block that was saved before advancing: move on.
+    # if the block was already finished before the refresh, move on
     if rec["step"].startswith("block_") and block_finished(rec, block_index(rec["step"])):
         advance(rec)
     return rec

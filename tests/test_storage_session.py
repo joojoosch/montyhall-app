@@ -1,4 +1,4 @@
-"""Tests for storage.py, session.py and export.py. Run with:  pytest -q"""
+# Tests for storage.py, session.py and export.py. Run with:  pytest -q
 
 import base64
 import json
@@ -29,7 +29,7 @@ class Resp:
 
 
 class FakeGitHub:
-    """Stores files in memory, checks sha like GitHub, can inject failures."""
+    # keeps files in memory and behaves like GitHub, can also fake errors
 
     def __init__(self):
         self.files = {}          # path -> (sha, content_b64)
@@ -73,7 +73,7 @@ def _gh(fake):
 
 
 def _full_record(seq="A", mode="pilot", choose=None, rng=None):
-    """Play a whole session through session.py like the app does."""
+    # plays a whole session through session.py, like the app does
     rng = rng or random.Random(0)
     rec = sess.new_record(game.make_code(rng), mode, seq)
     while rec["step"] != "end":
@@ -236,9 +236,9 @@ def test_comprehension_logs_wrong_answers():
 
 
 def test_second_penalty_block_says_rules_change():
-    assert texts.rules_for("pen_stay", 2).startswith("Everything stays the same")
-    assert texts.rules_for("pen_stay", 3).startswith("Important: the rules change")
-    assert texts.rules_for("pen_switch", 3).startswith("Important: the rules change")
+    assert texts.rules_for("pen_stay", 2).startswith("Same game, one change")
+    assert texts.rules_for("pen_stay", 3).startswith("The rule changes")
+    assert texts.rules_for("pen_switch", 3).startswith("The rule changes")
 
 
 def test_placeholders_detected():

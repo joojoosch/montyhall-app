@@ -1,9 +1,7 @@
-"""Pure game logic for the Monty Hall experiment. No Streamlit in here.
-
-Every function that uses randomness takes an optional `rng`. By default it
-uses random.SystemRandom (OS entropy, no seed, cannot be reproduced or
-predicted). Tests pass a seeded random.Random so they are repeatable.
-"""
+# Game rules of the Monty Hall experiment (no Streamlit here, so it's easy to test).
+#
+# Randomness: SystemRandom uses the computer's own random source, with no seed,
+# so nobody can predict the doors. The tests pass their own seeded rng instead.
 
 import random
 
@@ -16,19 +14,16 @@ def _rng(rng):
     return rng if rng is not None else _SYSTEM_RNG
 
 
-# ---------- one trial ----------
+# ---------- one game ----------
 
 def draw_trophy_door(rng=None):
-    """Trophy door, uniform over 1-3, new on every trial."""
+    # new random trophy door for every game
     return _rng(rng).choice(config.DOORS)
 
 
 def host_opens(first_pick, trophy_door, rng=None):
-    """Door the host opens: never the picked door, never the trophy door.
-
-    If the pick is the trophy door, both other doors are empty and the host
-    chooses between them at random (50/50).
-    """
+    # The host never opens the picked door or the trophy door.
+    # If the pick IS the trophy door, two doors are left and he picks one at random.
     _check_door(first_pick)
     _check_door(trophy_door)
     options = [d for d in config.DOORS if d != first_pick and d != trophy_door]
@@ -36,7 +31,7 @@ def host_opens(first_pick, trophy_door, rng=None):
 
 
 def remaining_door(first_pick, host_opened):
-    """The one closed door that is not the participant's pick."""
+    # the closed door you get when you switch
     if first_pick == host_opened:
         raise ValueError("host cannot open the picked door")
     (door,) = [d for d in config.DOORS if d not in (first_pick, host_opened)]
@@ -52,7 +47,7 @@ def final_door(first_pick, host_opened, choice):
 
 
 def is_penalised(block, choice):
-    """True if this choice carries the penalty in this block."""
+    # switching costs in pen_switch, staying costs in pen_stay
     _check_block(block)
     return (block == config.PEN_SWITCH and choice == "switch") or (
         block == config.PEN_STAY and choice == "stay"
@@ -60,7 +55,7 @@ def is_penalised(block, choice):
 
 
 def points_for(block, choice, won):
-    """Points for one trial (see the points table in the brief)."""
+    # win = 100, win with the penalised option = 75, loss = 0
     _check_block(block)
     if choice not in ("stay", "switch"):
         raise ValueError(f"invalid choice {choice!r}")
@@ -72,26 +67,24 @@ def points_for(block, choice, won):
 
 
 def resolve_trial(block, trophy_door, first_pick, host_opened, choice):
-    """Outcome of a finished trial as a dict of the data fields."""
+    # everything that is saved about the result of one game
     door = final_door(first_pick, host_opened, choice)
     won = door == trophy_door
-    pts = points_for(block, choice, won)
     return {
         "choice": choice,
         "final_door": door,
         "switched": int(choice == "switch"),
         "won": int(won),
-        # 1 only when the penalty actually reduced the points (a win through
-        # the penalised option). The raw choice is stored anyway.
+        # 1 only if the penalty really cost points (a win with the penalised option)
         "penalty_applied": int(won and is_penalised(block, choice)),
-        "points": pts,
+        "points": points_for(block, choice, won),
     }
 
 
-# ---------- session structure ----------
+# ---------- whole session ----------
 
 def block_plan(sequence):
-    """List of (block, block_order, n_trials) for a sequence 'A' or 'B'."""
+    # [(block, block_order, number of games), ...] for sequence A or B
     if sequence not in config.SEQUENCES:
         raise ValueError(f"unknown sequence {sequence!r}")
     plan = []
@@ -106,11 +99,7 @@ def total_trials():
 
 
 def assign_sequence(counts=None, rng=None):
-    """Balanced assignment: the sequence with fewer participants so far.
-
-    `counts` is e.g. {"A": 12, "B": 11}. Ties (or no counts) are broken at
-    random.
-    """
+    # give the sequence with fewer people so far, random if it's a tie
     counts = counts or {}
     a, b = counts.get("A", 0), counts.get("B", 0)
     if a < b:
@@ -121,13 +110,13 @@ def assign_sequence(counts=None, rng=None):
 
 
 def make_code(rng=None):
-    """Random 6-character participant ID / personal code."""
+    # 6-character code = participant ID (no 0/O/1/I/L, so it's easy to read)
     r = _rng(rng)
     return "".join(r.choice(config.CODE_ALPHABET) for _ in range(config.CODE_LENGTH))
 
 
 def validate_belief(value):
-    """Return the belief as int 0-100, or raise ValueError."""
+    # belief answer must be a whole number from 0 to 100
     if value is None or isinstance(value, bool):
         raise ValueError("belief answer missing")
     if isinstance(value, float):
@@ -140,8 +129,6 @@ def validate_belief(value):
         raise ValueError("belief must be between 0 and 100")
     return value
 
-
-# ---------- helpers ----------
 
 def _check_door(door):
     if door not in config.DOORS:

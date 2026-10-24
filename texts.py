@@ -1,74 +1,72 @@
-"""All participant-facing texts. Edit wording here only.
-
-Placeholders in [SQUARE BRACKETS] must be replaced before MODE = "real";
-the app refuses to start in real mode while any are left.
-"""
+# All texts participants see. Change wording here, nowhere else.
+# Anything in [square brackets] is a placeholder: in real mode the app
+# won't start until it is replaced.
 
 import config
 
-# ---------- general ----------
-
 TITLE = "The door game"
-NO_REFRESH = "Please do not refresh or close the page during the study."
 CONTINUE = "Continue"
 NEXT = "Next"
-SAVE_DELAY = "Saving took a little longer than usual. You can simply continue."
+SAVE_DELAY = "Saving took a bit longer. You can just continue."
 
-# ---------- 1. consent ----------
+# 1. Consent
+CONSENT_TEXT = """[CONSENT TEXT: purpose, duration, voluntary, anonymous,
+prize draw, contact. Still to be written.]"""
+CONSENT_CHECKBOX = "I have read this and agree to take part."
+NO_REFRESH = "Please don't refresh or close this page during the study."
 
-CONSENT_TEXT = """[CONSENT TEXT: purpose, about 10 to 15 minutes, voluntary,
-anonymous, how the prize draw works, contact. To be written by Joo-Ran.]"""
-CONSENT_CHECKBOX = "I have read this information and agree to take part."
+# 2. Prize
+PRIZE_HEADER = "What your points are worth"
+PRIZE_TEXT = """Every 10 points you collect are worth 20 Rappen,
+so 1,000 points are worth 20 CHF.
 
-# ---------- 2. prize ----------
+After the study, two participants are drawn at random. Each of them gets
+the money for their own points. At the end you get a personal code.
+That code is how we contact the winners."""
 
-PRIZE_TEXT = """Every point you collect is worth money: 20 Rappen for every 10 points.
-After the study ends, two participants will be drawn at random. Each of them
-receives the money for their own points. For example, 1,000 points are worth
-20 CHF. Your points come from your 25 games. At the end you get a personal
-code, and winners are contacted through this code."""
+# 3. Rules of the normal game
+RULES_HEADER = "How the game works"
+RULES_CONTROL = """Behind one of three doors is a trophy.
 
-# ---------- 3. rules, control block ----------
+1. You pick a door.
+2. The host opens one of the other two doors. This door is always empty
+   and never your door. If your door has the trophy, he opens one of the
+   other two at random.
+3. You stay with your door or switch to the other closed door.
 
-RULES_CONTROL = """You will see three doors. Behind one of them is a trophy. Choose the
-door where you think the trophy is.
+Trophy found: **100 points**. No trophy: **0 points**."""
 
-After your first pick, the host opens one of the other two doors. This door
-never has the trophy behind it, and it is never the door you picked. If you
-picked the door with the trophy, both other doors are empty and the host
-picks one of them at random.
+# Penalty rules. The first penalty block says "same game, one change";
+# the second one has to say that the old penalty is gone.
+RULES_PEN_SWITCH = """Same game, one change: **switching now costs 25 points.**
 
-Then you can stay with your door or switch to the other closed door. If you
-find the trophy you get 100 points, otherwise 0 points."""
+- Win after switching: 75 points
+- Win after staying: 100 points
+- No trophy: 0 points"""
 
-# ---------- 7./8. rules, penalty blocks ----------
+RULES_PEN_STAY = """Same game, one change: **staying now costs 25 points.**
 
-RULES_PEN_SWITCH = """Everything stays the same, but now there is a penalty of 25 points if
-you switch. If you find the trophy after switching, you get 75 points instead
-of 100. If you find the trophy by staying with your first door, you get the
-full 100 points. If you do not find the trophy, you get 0 points."""
+- Win after staying: 75 points
+- Win after switching: 100 points
+- No trophy: 0 points"""
 
-RULES_PEN_STAY = """Everything stays the same, but now there is a penalty of 25 points if
-you stay with your first door. If you find the trophy by staying, you get 75
-points instead of 100. If you find the trophy by switching, you get the full
-100 points. If you do not find the trophy, you get 0 points."""
+RULES_SECOND_PEN_SWITCH = """The rule changes: staying is free again, but
+**switching now costs 25 points.**
 
-# Second penalty block: "everything stays the same" would be wrong here,
-# because the earlier penalty is removed. PROPOSED wording, check it.
-RULES_SECOND_PEN_SWITCH = """Important: the rules change now. The penalty for staying no longer
-applies. Instead, there is now a penalty of 25 points if you switch. If you
-find the trophy after switching, you get 75 points instead of 100. If you
-find the trophy by staying with your first door, you get the full 100 points.
-If you do not find the trophy, you get 0 points."""
+- Win after switching: 75 points
+- Win after staying: 100 points
+- No trophy: 0 points"""
 
-RULES_SECOND_PEN_STAY = """Important: the rules change now. The penalty for switching no longer
-applies. Instead, there is now a penalty of 25 points if you stay with your
-first door. If you find the trophy by staying, you get 75 points instead of
-100. If you find the trophy by switching, you get the full 100 points. If you
-do not find the trophy, you get 0 points."""
+RULES_SECOND_PEN_STAY = """The rule changes: switching is free again, but
+**staying now costs 25 points.**
+
+- Win after staying: 75 points
+- Win after switching: 100 points
+- No trophy: 0 points"""
 
 
 def rules_for(block, block_order):
+    """Rules text for a block. block_order 2 = first penalty block."""
     if block == config.CONTROL:
         return RULES_CONTROL
     first = block_order == 2
@@ -77,8 +75,11 @@ def rules_for(block, block_order):
     return RULES_PEN_STAY if first else RULES_SECOND_PEN_STAY
 
 
-# ---------- comprehension checks ----------
+def rules_header(idx):
+    return RULES_HEADER if idx == 0 else f"Part {idx + 1} of 3: new rule"
 
+
+# Comprehension checks (everything must be right to continue)
 POINT_OPTIONS = ["0", "25", "50", "75", "100"]
 
 COMPREHENSION = {
@@ -91,130 +92,97 @@ COMPREHENSION = {
          "options": POINT_OPTIONS, "correct": "100"},
     ],
     config.PEN_SWITCH: [
-        {"id": "switch_win", "q": "How many points do you get if you switch and win the trophy?",
+        {"id": "switch_win", "q": "How many points do you get if you switch and win?",
          "options": POINT_OPTIONS, "correct": "75"},
-        {"id": "stay_win", "q": "How many points do you get if you stay and win the trophy?",
+        {"id": "stay_win", "q": "How many points do you get if you stay and win?",
          "options": POINT_OPTIONS, "correct": "100"},
     ],
     config.PEN_STAY: [
-        {"id": "stay_win", "q": "How many points do you get if you stay and win the trophy?",
+        {"id": "stay_win", "q": "How many points do you get if you stay and win?",
          "options": POINT_OPTIONS, "correct": "75"},
-        {"id": "switch_win", "q": "How many points do you get if you switch and win the trophy?",
+        {"id": "switch_win", "q": "How many points do you get if you switch and win?",
          "options": POINT_OPTIONS, "correct": "100"},
     ],
 }
-COMP_HEADER = "Before you start, please answer these questions."
-COMP_WRONG = "That is not correct. Please read the rules again and try once more."
-COMP_SUBMIT = "Check my answers"
-COMP_MISSING = "Please answer all questions."
+COMP_HEADER = "Quick check"
+COMP_WRONG = "Not quite. Read the rules again and try once more."
+COMP_MISSING = "Please answer every question."
+COMP_SUBMIT = "Check answers"
 
-# ---------- trials ----------
-
-PICK_PROMPT = "Choose a door."
-DECIDE_PROMPT = "The host opened door {opened}. It is empty."
+# Games
+PICK_PROMPT = "Pick a door."
+DECIDE_PROMPT = "The host opened door {opened}. It's empty."
+# shown as small lines above the Stay / Switch buttons
 PAYOFFS = {
-    config.CONTROL: "Find the trophy: 100 points",
-    config.PEN_SWITCH: "Switch and win: 75 points · Stay and win: 100 points",
-    config.PEN_STAY: "Stay and win: 75 points · Switch and win: 100 points",
+    config.CONTROL: ["Trophy: 100 points"],
+    config.PEN_SWITCH: ["Win after staying: 100 points", "Win after switching: 75 points"],
+    config.PEN_STAY: ["Win after staying: 75 points", "Win after switching: 100 points"],
 }
 STAY_BUTTON = "Stay with door {door}"
 SWITCH_BUTTON = "Switch to door {door}"
-WIN = "You found the trophy!"
-LOSE = "No trophy this time. The trophy was behind door {door}."
-TRIAL_POINTS = "Points in this game: {points}"
-PENALTY_NOTE = "Because of the penalty you get 75 instead of 100 points."
-NEW_TOTAL = "Your total: {total} points"
+WIN = "You found the trophy."
+LOSE = "No trophy. It was behind door {door}."
+TRIAL_POINTS = "+{points} points"
+PENALTY_NOTE = "75 instead of 100 because of the penalty."
+TAG_PICK = "Your pick"
+TAG_FINAL = "Your choice"
+EMPTY = "Empty"
 
 
-def counter(trial_in_block, n_in_block, total):
-    return f"Trial {trial_in_block} of {n_in_block} · Total: {total} points"
+def counter(trial_in_block, n_in_block):
+    return f"Game {trial_in_block} of {n_in_block}"
 
 
-# ---------- beliefs ----------
+def total(points):
+    return f"{points} points"
 
-BELIEF_QUESTION = """After the host has opened one door, how likely do you think it is that
-the trophy is behind the closed door that you did not pick first? Please do
-not calculate, just answer from the feeling you got while playing."""
-BELIEF_LABEL = "Your answer in % (0 to 100)"
-BELIEF_MISSING = "Please enter a whole number between 0 and 100."
 
-# ---------- prior knowledge ----------
+# Belief question (asked twice)
+BELIEF_HEADER = "One question"
+BELIEF_QUESTION = """After the host opens a door: how likely do you think it is
+that the trophy is behind the **closed door you did not pick first**?
 
-PRIOR_QUESTION = "Did you know the three-door problem before this study?"
-PRIOR_OPTIONS = ["I knew it before", "I recognised it during the study", "I did not know it"]
-PRIOR_MISSING = "Please choose one answer."
+Answer from your feeling while playing. Don't calculate."""
+BELIEF_LABEL = "Your answer in %"
+BELIEF_MISSING = "Please enter a whole number from 0 to 100."
 
-# ---------- demographics (all optional) ----------
+# Prior knowledge
+PRIOR_QUESTION = "Did you know this three-door problem before?"
+PRIOR_OPTIONS = ["Yes, I knew it before", "I recognised it during the study", "No"]
+PRIOR_MISSING = "Please pick one answer."
 
-DEMO_HEADER = "A few questions about you. All of them are optional."
+# Demographics (all optional)
+DEMO_HEADER = "About you"
+DEMO_NOTE = "All questions are optional."
 AGE_LABEL = "Age"
 GENDER_LABEL = "Gender"
 GENDER_OPTIONS = ["female", "male", "diverse", "prefer not to say"]
-STUDENT_LABEL = "Are you currently a student?"
+STUDENT_LABEL = "Are you a student?"
 STUDENT_OPTIONS = ["Yes", "No", "prefer not to say"]
-FIELD_LABEL = "If yes: field of study"
+FIELD_LABEL = "Field of study (if student)"
 
-# ---------- pilot feedback ----------
-
+# Pilot only
 PILOT_QUESTION = "Was anything unclear or confusing?"
 
-# ---------- end ----------
-
-END_TEXT = """Thank you for taking part. You collected **{points}** points.
-Your personal code is **{code}**. Please save it.
-
-After the study ends, two participants will be drawn at random. If you want
-to be contacted in case you win, please enter your code and your contact
+# End
+END_HEADER = "Thank you!"
+END_POINTS = "You collected {points} points."
+END_CODE_LABEL = "Your personal code"
+END_TEXT = """Please save this code. After the study, two participants are
+drawn at random. To be contacted if you win, enter your code and contact
 details in this separate form: {link}
 
-Your contact details are stored separately from your answers."""
-DEBRIEF = """About this study: in the three-door problem, switching wins in 2 of 3
-cases. We were interested in why many people stay with their first door."""
-END_SAVE_FAILED = ("Your answers could not be saved yet. Please press the button "
-                   "below to try again before closing the page.")
+Your contact details are kept apart from your answers."""
+DEBRIEF = """About this study: in the three-door game, switching wins in
+2 out of 3 games. We wanted to know why many people stay with their first door."""
+END_SAVE_FAILED = "Your answers aren't saved yet. Please press the button below before closing the page."
 END_RETRY = "Try saving again"
-ALREADY_DONE = "You have already completed this study. Your personal code is **{code}**."
-
-# ---------- styling (neutral, phone friendly) ----------
-
-CSS = """
-<style>
-#MainMenu, footer, header [data-testid="stToolbar"] {visibility: hidden;}
-.block-container {max-width: 680px; padding-top: 2rem;}
-div.stButton > button, div[data-testid="stFormSubmitButton"] > button {
-  width: 100%; min-height: 3.2rem; font-size: 1.05rem;
-}
-/* keep door buttons and Stay/Switch side by side on phones */
-div[data-testid="stHorizontalBlock"] {flex-wrap: nowrap !important; gap: 0.5rem;}
-div[data-testid="stHorizontalBlock"] > div {min-width: 0 !important; flex: 1 1 0 !important;}
-.doors {display: flex; gap: 0.5rem; justify-content: center; margin: 1rem 0;}
-.door {flex: 1 1 0; max-width: 140px; aspect-ratio: 2 / 3; border-radius: 10px;
-  border: 2px solid #8a8a8a; background: #f2efe9; display: flex;
-  flex-direction: column; align-items: center; justify-content: center;
-  font-size: 1rem; color: #222; text-align: center;}
-.door .big {font-size: 2rem; line-height: 1.2;}
-.door.picked {border: 4px solid #333;}
-.door.opened {background: #d9d9d9; color: #666;}
-.counter {text-align: center; font-weight: 600; margin-bottom: 0.5rem;}
-.payoff {text-align: center; margin: 0.5rem 0 1rem 0;}
-</style>
-"""
-
-DOOR_LABELS = {
-    "closed": ("🚪", "Door {d}"),
-    "picked": ("🚪", "Door {d}<br>your pick"),
-    "opened": ("–", "Door {d}<br>empty"),
-    "trophy": ("🏆", "Door {d}"),
-    "empty": ("–", "Door {d}<br>empty"),
-}
-FINAL_MARK = "<br><b>your final choice</b>"
 
 
 def placeholders_left():
-    """Names of texts that still contain [PLACEHOLDER] markers."""
+    """Lists texts that still contain [placeholders], plus a missing form link."""
     left = [name for name, val in globals().items()
-            if name.isupper() and isinstance(val, str) and "[" in val and "]" in val
-            and name != "CSS"]
+            if name.isupper() and isinstance(val, str) and "[" in val and "]" in val]
     if not config.CONTACT_FORM_URL:
         left.append("config.CONTACT_FORM_URL")
     return left

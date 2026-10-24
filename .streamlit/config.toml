@@ -3,6 +3,10 @@ toolbarMode = "minimal"
 
 [theme]
 base = "light"
+primaryColor = "#34427A"
+backgroundColor = "#F3F5F8"
+secondaryBackgroundColor = "#E6EAF0"
+textColor = "#1E2433"
 
 [browser]
 gatherUsageStats = false
