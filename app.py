@@ -407,16 +407,21 @@ def main():
         screen_consent()
         return
 
-    # keep the ID in the URL so a refresh can continue where it stopped
-    if st.query_params.get("pid") != S.rec["participant_id"]:
-        st.query_params["pid"] = S.rec["participant_id"]
-        st.query_params["seq"] = S.rec["sequence"]
-
     step = S.rec["step"]
     if step == "end" and S.need_save:  # last save before the thank-you screen
         S.need_save = False
         if save() and get_storage().mark_completed(S.rec):
             get_balancer().finish(S.rec["participant_id"])
+
+    # Keep the ID in the URL so a refresh can continue where it stopped.
+    # Once finished and saved, remove it again: if someone copies the link to
+    # send it to a friend, the friend gets a fresh start, not their code.
+    if S.rec["completed"] and S.last_save_ok:
+        if "pid" in st.query_params:
+            st.query_params.clear()
+    elif st.query_params.get("pid") != S.rec["participant_id"]:
+        st.query_params["pid"] = S.rec["participant_id"]
+        st.query_params["seq"] = S.rec["sequence"]
 
     progress_bar()
     if step == "prize":

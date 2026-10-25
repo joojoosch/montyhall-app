@@ -176,7 +176,8 @@ PILOT_QUESTION = "Was anything unclear or confusing?"
 END_HEADER = "Thank you!"
 END_POINTS = "You collected **{points} points**. If you are drawn, you get **{chf}**."
 END_CODE_LABEL = "Your personal code"
-END_TEXT = """Please save this code. After the study, two participants are
+END_TEXT = """Please write this code down now. It won't be shown again once you
+leave this page. After the study, two participants are
 drawn at random. To be contacted if you win, enter your code and contact
 details in this separate form: {link}
 
