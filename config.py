@@ -9,7 +9,8 @@ SHOW_MONEY = True      # show the CHF value next to the points
 
 MODE = "pilot"         # "pilot" or "real" - decides the data folder
 APP_VERSION = "0.5.0"
-CONTACT_FORM_URL = ""  # link to the separate contact form
+# link to the separate prize form (Microsoft Forms)
+CONTACT_FORM_URL = "https://forms.cloud.microsoft/Pages/ResponsePage.aspx?id=WS4mp1YbWk-kEm8HGB9I7oYMwjPp3dNGjjWAAXGEFDlUOENSNExRMEpWR1FGME45RUJIRDhPVFo1Ui4u"
 
 # Off for now: if the end screen says "switching wins 2 of 3", people could
 # tell friends who haven't played yet. Better to send it after data collection.

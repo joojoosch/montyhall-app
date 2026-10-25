@@ -238,6 +238,7 @@ PILOT_QUESTION = "Was anything unclear or confusing?"
 END_HEADER = "Thank you!"
 END_POINTS = "You collected **{points} points**. If you are drawn, you get **{chf}**."
 END_CODE_LABEL = "Your personal code"
+FORM_LINK = "Open the prize draw form"
 END_TEXT = """If you want to take part in the prize draw, please write this code
 down now. It won't be shown again once you leave this page. After the study,
 two participants are drawn at random from everyone who entered their code and

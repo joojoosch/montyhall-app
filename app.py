@@ -403,7 +403,8 @@ def on_retry():
 
 
 def screen_end():
-    link = config.CONTACT_FORM_URL or "[link missing]"
+    # a short clickable link (opens in a new tab, so the code stays visible)
+    link = f"[{texts.FORM_LINK}]({config.CONTACT_FORM_URL})" if config.CONTACT_FORM_URL else "[link missing]"
     st.header(texts.END_HEADER)
     st.markdown(texts.END_POINTS.format(points=S.rec["total_points"],
                                         chf=game.chf(S.rec["total_points"])))
