@@ -35,6 +35,11 @@ Without secrets the app saves into `local_data/` (only allowed in pilot mode).
 
 **Token** (create on deployment day): GitHub → profile picture → Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token. Expiration: end of December. Repository access: *Only select repositories* → `montyhall-data`. Permissions: **Contents: Read and write**. Copy it straight into the Streamlit secrets.
 
+## After every change to the code
+Streamlit reloads `app.py` after a push, but can keep other files (like
+`texts.py` or `config.py`) in memory. So after every push: share.streamlit.io
+-> three dots next to the app -> **Reboot app**, then check in a private window.
+
 ## Pilot → real
 In `config.py` set `MODE = "real"` and commit. Before that, fill `CONSENT_TEXT` in `texts.py` and `CONTACT_FORM_URL` in `config.py`: in real mode the app refuses to start while placeholders are left or the GitHub secrets are missing. Pilot data stays in `data/pilot/`, real data goes to `data/real/`.
 
@@ -88,4 +93,4 @@ how well the patterns find the types.
 - [ ] Simultaneous start: 3 people press "Continue" on the consent page at the same moment → 3 complete files.
 - [ ] End screen shows points, code and form link.
 - [ ] Note the time you need for one full run (for the consent text).
-- [ ] Before launch: `MODE = "real"`, open the app once → no "not ready" message, first real file appears in `data/real/`.
+- [ ] Launch day: `MODE = "real"` pushed → **Reboot app** → grey "Pilot mode" line is gone → play once, file appears in `data/real/` → delete that test file (and its marker in `data/real/completed/`).
