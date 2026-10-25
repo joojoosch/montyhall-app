@@ -6,7 +6,7 @@
 import config
 import game
 
-TITLE = "The door game"
+TITLE = "The Door Game"
 CONTINUE = "Continue"
 NEXT = "Next"
 SAVE_DELAY = "Saving took a bit longer. You can just continue."
