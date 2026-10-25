@@ -156,7 +156,7 @@ COMPREHENSION = {
 # 5. During the games
 COUNTER = "Game {n} of {total}"
 TOTAL = "{points} points · {chf}"
-EMPTY = "No trophy"
+EMPTY = "Empty"
 PICK_PROMPT = "Pick a door."
 DOOR_BUTTON = "Door {door}"
 TAG_PICK = "Your pick"
