@@ -159,6 +159,17 @@ PRIOR_QUESTION = "Did you know this three-door problem before?"
 PRIOR_OPTIONS = ["Yes, I knew it before", "I recognised it during the study", "No"]
 PRIOR_MISSING = "Please pick one answer."
 
+# Reason for the choice in game 1 (after prior knowledge, before demographics).
+# Saved as the code on the left, shown as the text on the right.
+REASON_QUESTION = ("Think back to your very first game. What was the main reason "
+                   "for your choice (stay or switch)?")
+REASON_OPTIONS = {
+    "better_choice": "I thought it was more likely to win.",
+    "try_out": "I wanted to try out what happens.",
+    "gut_feeling": "It felt right, a gut feeling.",
+    "no_reason": "No particular reason.",
+}
+
 # Demographics (all optional)
 DEMO_HEADER = "About you"
 DEMO_NOTE = "All questions are optional."

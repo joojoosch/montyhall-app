@@ -345,6 +345,23 @@ def screen_prior():
     show_msg()
 
 
+def on_reason():
+    if not on_step("reason"):
+        return
+    if S.get("reason_in") is None:
+        set_msg(texts.PRIOR_MISSING)
+        return
+    S.rec["first_game_reason"] = S.reason_in  # saved as code, e.g. "try_out"
+    go_next("reason")
+
+
+def screen_reason():
+    st.radio(texts.REASON_QUESTION, list(texts.REASON_OPTIONS), index=None,
+             format_func=texts.REASON_OPTIONS.get, key="reason_in")
+    button(st, texts.NEXT, key="go_reason", on_click=on_reason)
+    show_msg()
+
+
 def on_demo():
     if not on_step("demo"):
         return
@@ -434,6 +451,8 @@ def main():
         screen_belief(int(step[-1]))
     elif step == "prior":
         screen_prior()
+    elif step == "reason":
+        screen_reason()
     elif step == "demo":
         screen_demo()
     elif step == "pilot_fb":

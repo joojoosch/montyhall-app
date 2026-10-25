@@ -8,7 +8,7 @@ CHF_PER_POINT = 0.02   # 20 Rappen per 10 points
 SHOW_MONEY = True      # show the CHF value next to the points
 
 MODE = "pilot"         # "pilot" or "real" - decides the data folder
-APP_VERSION = "0.3.0"
+APP_VERSION = "0.4.0"
 CONTACT_FORM_URL = ""  # link to the separate contact form
 
 # Off for now: if the end screen says "switching wins 2 of 3", people could

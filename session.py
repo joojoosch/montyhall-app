@@ -18,7 +18,7 @@ def now_iso():
 def steps(mode):
     # screens after consent, in order
     s = ["prize", "rules_0", "block_0", "belief_1", "rules_1", "block_1",
-         "rules_2", "block_2", "belief_2", "prior", "demo"]
+         "rules_2", "block_2", "belief_2", "prior", "reason", "demo"]
     if mode == "pilot":
         s.append("pilot_fb")
     s.append("end")
@@ -41,6 +41,7 @@ def new_record(pid, mode, sequence):
         "belief_2": None, "belief_2_time": None,
         "comprehension": {b: {"attempts": 0, "wrong": {}} for b, _, _ in plan},
         "prior_knowledge": None,
+        "first_game_reason": None,
         "age": None, "gender": None, "student_status": None, "field_of_study": None,
         "pilot_feedback": None,
         "total_points": 0,

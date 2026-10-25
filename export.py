@@ -16,7 +16,7 @@ PARTICIPANT_FIELDS = [
     "participant_id", "mode", "app_version", "sequence", "consent", "start_time",
     "end_time", "duration_s", "completed", "resumed", "resume_count",
     "belief_1", "belief_1_time", "belief_2", "belief_2_time",
-    "prior_knowledge", "age", "gender", "student_status", "field_of_study",
+    "prior_knowledge", "first_game_reason", "age", "gender", "student_status", "field_of_study",
     "pilot_feedback", "total_points", "n_trials",
     "comp_control_attempts", "comp_pen_switch_attempts", "comp_pen_stay_attempts",
     "comp_wrong", "assign_counts",

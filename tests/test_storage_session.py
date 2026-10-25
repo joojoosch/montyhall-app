@@ -95,6 +95,8 @@ def _full_record(seq="A", mode="pilot", choose=None, rng=None):
                 sess.record_trial(rec, idx, trophy, pick, opened, choice, 1000, 800)
         if step.startswith("belief_"):
             rec[step] = 50
+        if step == "reason":
+            rec["first_game_reason"] = "try_out"
         sess.advance(rec)
     return rec
 
@@ -199,6 +201,9 @@ def test_full_session_both_sequences():
         for b in order:
             assert rec["comprehension"][b]["attempts"] == 2
         assert "pilot_fb" in sess.steps("pilot") and "pilot_fb" not in sess.steps("real")
+        order = sess.steps("real")
+        assert order.index("prior") < order.index("reason") < order.index("demo")
+        assert rec["first_game_reason"] == "try_out"
 
 
 def test_always_switch_scores_more_than_always_stay():
@@ -278,3 +283,5 @@ def test_export_csv():
             lines = f.readlines()
         assert len(lines) == 4
         assert any("DROP22" in line and "False" in line for line in lines)
+        assert "first_game_reason" in lines[0]
+        assert sum("try_out" in line for line in lines) == 2  # the two finished people
