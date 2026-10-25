@@ -6,6 +6,7 @@
 # Every button calls a function that first checks we are still on the right
 # screen, so a double click can't skip anything.
 
+import inspect
 import sys
 import time
 
@@ -82,6 +83,18 @@ def html(code):
     st.markdown(code, unsafe_allow_html=True)
 
 
+# Newer Streamlit makes buttons only as wide as their text. I want every
+# button to fill its column (centred under the doors, big for thumbs), so
+# I pass width="stretch" when this Streamlit version supports it.
+_STRETCH = {"width": "stretch"} if "width" in inspect.signature(st.button).parameters else {}
+_STRETCH_FORM = ({"width": "stretch"}
+                 if "width" in inspect.signature(st.form_submit_button).parameters else {})
+
+
+def button(where, label, **kwargs):
+    return where.button(label, **_STRETCH, **kwargs)
+
+
 def progress_bar():
     # rough progress through the whole study (screens + games)
     order = sess.steps(S.rec["mode"])
@@ -155,7 +168,7 @@ def screen_consent():
     st.markdown(texts.CONSENT_TEXT)
     st.info(texts.NO_REFRESH)
     agreed = st.checkbox(texts.CONSENT_CHECKBOX, key="consent_cb")
-    st.button(texts.CONTINUE, key="go_consent", disabled=not agreed, on_click=on_consent)
+    button(st, texts.CONTINUE, key="go_consent", disabled=not agreed, on_click=on_consent)
 
 
 # ---------- 2. prize ----------
@@ -163,7 +176,7 @@ def screen_consent():
 def screen_prize():
     st.header(texts.PRIZE_HEADER)
     st.markdown(texts.PRIZE_TEXT)
-    st.button(texts.CONTINUE, key="go_prize", on_click=go_next, args=("prize",))
+    button(st, texts.CONTINUE, key="go_prize", on_click=go_next, args=("prize",))
 
 
 # ---------- rules + comprehension check before each block ----------
@@ -195,7 +208,7 @@ def screen_rules(idx):
             # index=None: nothing is pre-selected
             st.radio(q["q"], q["options"], index=None, horizontal=True,
                      key=f"comp_{idx}_{q['id']}")
-        st.form_submit_button(texts.COMP_SUBMIT, on_click=on_comp, args=(idx,))
+        st.form_submit_button(texts.COMP_SUBMIT, on_click=on_comp, args=(idx,), **_STRETCH_FORM)
     show_msg()
 
 
@@ -262,7 +275,7 @@ def screen_block(idx):
         doors_row({d: "closed" for d in config.DOORS}, {})
         html(f'<div class="prompt">{texts.PICK_PROMPT}</div>')
         for col, d in zip(st.columns(3), config.DOORS):
-            col.button(f"Door {d}", key=f"pick_{t['id']}_{d}", on_click=on_pick, args=(t["id"], d))
+            button(col, f"Door {d}", key=f"pick_{t['id']}_{d}", on_click=on_pick, args=(t["id"], d))
 
     elif t["phase"] == "decide":
         other = game.remaining_door(t["pick"], t["opened"])
@@ -272,9 +285,9 @@ def screen_block(idx):
         html(f'<div class="prompt">{texts.DECIDE_PROMPT.format(opened=t["opened"])}</div>'
              f'<div class="payoffs">{"<br>".join(texts.PAYOFFS[block])}</div>')
         left, right = st.columns(2)  # Stay always left, Switch always right
-        left.button(texts.STAY_BUTTON.format(door=t["pick"]), key=f"stay_{t['id']}",
+        button(left, texts.STAY_BUTTON.format(door=t["pick"]), key=f"stay_{t['id']}",
                     on_click=on_choice, args=(t["id"], "stay"))
-        right.button(texts.SWITCH_BUTTON.format(door=other), key=f"switch_{t['id']}",
+        button(right, texts.SWITCH_BUTTON.format(door=other), key=f"switch_{t['id']}",
                      on_click=on_choice, args=(t["id"], "switch"))
 
     else:  # feedback: show what was behind every door, then the result card
@@ -285,7 +298,7 @@ def screen_block(idx):
                 tag = f"<b>{texts.TAG_FINAL}</b>" if d == r["final_door"] else ""
                 html(style.door(d, states[d], tag, won=bool(r["won"])))
         html(style.result_card(r, S.rec["total_points"]))
-        st.button(texts.NEXT, key=f"go_next_{t['id']}", on_click=on_next_trial, args=(t["id"],))
+        button(st, texts.NEXT, key=f"go_next_{t['id']}", on_click=on_next_trial, args=(t["id"],))
 
 
 # ---------- belief question (after the control block and at the end) ----------
@@ -310,7 +323,7 @@ def screen_belief(num):
     # value=None: empty field, so nobody is anchored on a default number
     st.number_input(texts.BELIEF_LABEL, min_value=0, max_value=100, step=1, value=None,
                     placeholder="0 to 100", key=f"belief_in_{num}")
-    st.button(texts.NEXT, key=f"go_belief_{num}", on_click=on_belief, args=(num,))
+    button(st, texts.NEXT, key=f"go_belief_{num}", on_click=on_belief, args=(num,))
     show_msg()
 
 
@@ -328,7 +341,7 @@ def on_prior():
 
 def screen_prior():
     st.radio(texts.PRIOR_QUESTION, texts.PRIOR_OPTIONS, index=None, key="prior_in")
-    st.button(texts.NEXT, key="go_prior", on_click=on_prior)
+    button(st, texts.NEXT, key="go_prior", on_click=on_prior)
     show_msg()
 
 
@@ -349,7 +362,7 @@ def screen_demo():
     st.radio(texts.GENDER_LABEL, texts.GENDER_OPTIONS, index=None, key="gender_in")
     st.radio(texts.STUDENT_LABEL, texts.STUDENT_OPTIONS, index=None, key="student_in")
     st.text_input(texts.FIELD_LABEL, max_chars=60, key="field_in")
-    st.button(texts.CONTINUE, key="go_demo", on_click=on_demo)
+    button(st, texts.CONTINUE, key="go_demo", on_click=on_demo)
 
 
 def on_pilot_fb():
@@ -361,7 +374,7 @@ def on_pilot_fb():
 
 def screen_pilot_fb():
     st.text_area(texts.PILOT_QUESTION, max_chars=2000, key="pilot_in")
-    st.button(texts.CONTINUE, key="go_pilot", on_click=on_pilot_fb)
+    button(st, texts.CONTINUE, key="go_pilot", on_click=on_pilot_fb)
 
 
 # ---------- end ----------
@@ -382,7 +395,7 @@ def screen_end():
         st.info(texts.DEBRIEF)
     if not S.last_save_ok:
         st.error(texts.END_SAVE_FAILED)
-        st.button(texts.END_RETRY, key="go_retry", on_click=on_retry)
+        button(st, texts.END_RETRY, key="go_retry", on_click=on_retry)
 
 
 # ---------- main ----------

@@ -46,6 +46,11 @@ header[data-testid="stHeader"], #MainMenu, footer { display: none; }
 .progress > div { height: 100%; background: var(--door); border-radius: 2px; }
 
 /* buttons: big enough for thumbs, all the same neutral style */
+/* backup for older Streamlit versions: stretch buttons to the full column */
+div[data-testid="stElementContainer"]:has(div.stButton),
+div[data-testid="stElementContainer"]:has(div[data-testid="stFormSubmitButton"]),
+div.stButton, div[data-testid="stButton"], div[data-testid="stFormSubmitButton"] { width: 100% !important; }
+div.stButton button, div[data-testid="stButton"] button { width: 100% !important; }
 div.stButton > button, div[data-testid="stFormSubmitButton"] > button {
   width: 100%; min-height: 3.2rem; font-size: 1.05rem; border-radius: 10px;
   background: #fff; color: var(--ink); border: 1.5px solid var(--ink);
@@ -62,6 +67,9 @@ div.stButton > button:disabled { opacity: 0.4; }
 div[class*="st-key-go"] button:hover, div[data-testid="stFormSubmitButton"] > button:hover {
   background: #343C52; color: #fff;
 }
+
+/* door buttons: same width as the door, centred under it */
+div[class*="st-key-pick_"] button { max-width: 150px !important; margin: 0 auto; display: block; }
 
 /* keep the three doors (and Stay/Switch) side by side on phones */
 div[data-testid="stHorizontalBlock"] { flex-wrap: nowrap !important; gap: 0.6rem; }
