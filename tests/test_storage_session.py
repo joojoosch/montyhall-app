@@ -256,7 +256,8 @@ def test_second_penalty_block_says_rules_change():
 
 def test_placeholders_detected():
     left = texts.placeholders_left()
-    assert "CONSENT_TEXT" in left and "config.CONTACT_FORM_URL" in left
+    assert "config.CONTACT_FORM_URL" in left   # form link still missing
+    assert "CONSENT_TEXT" not in left           # consent text is filled in
 
 
 def test_record_has_no_identifying_fields():
