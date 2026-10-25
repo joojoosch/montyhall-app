@@ -74,7 +74,8 @@ RULES_CONTROL = """Behind one of three doors is a trophy.
 
 1. You pick a door.
 2. The host opens one of the two doors you didn't pick. He always opens
-   an empty door. If both are empty, he picks one at random.
+   a door with no trophy behind it. If neither of them has the trophy, he
+   picks one at random.
 3. After the host has opened a door, you can either stay with your door or
    switch to the other door that is still closed.
 
@@ -155,11 +156,11 @@ COMPREHENSION = {
 # 5. During the games
 COUNTER = "Game {n} of {total}"
 TOTAL = "{points} points · {chf}"
-EMPTY = "Empty"
+EMPTY = "No trophy"
 PICK_PROMPT = "Pick a door."
 DOOR_BUTTON = "Door {door}"
 TAG_PICK = "Your pick"
-DECIDE_PROMPT = "The host opened door {opened}. It's empty."
+DECIDE_PROMPT = "The host opened door {opened}. There is no trophy behind it."
 # small grey lines above the Stay / Switch buttons
 PAYOFF_CONTROL = ["Trophy: 100 points"]
 PAYOFF_PEN_SWITCH = ["Win after staying: 100 points", "Win after switching: 75 points"]
