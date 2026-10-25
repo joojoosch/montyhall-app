@@ -165,7 +165,9 @@ def on_consent():
 
 def screen_consent():
     st.title(texts.TITLE)
-    st.markdown(texts.CONSENT_TEXT)
+    st.markdown(texts.CONSENT_SHORT)
+    with st.expander(texts.CONSENT_MORE):   # full consent text, one click away
+        st.markdown(texts.CONSENT_TEXT)
     st.info(texts.NO_REFRESH)
     agreed = st.checkbox(texts.CONSENT_CHECKBOX, key="consent_cb")
     button(st, texts.CONTINUE, key="go_consent", disabled=not agreed, on_click=on_consent)

@@ -12,7 +12,17 @@ NEXT = "Next"
 SAVE_DELAY = "Saving took a bit longer. You can just continue."
 NOT_OPEN = "The study isn't open yet. Please try again later."
 
-# 1. Consent
+# 1. Consent: a short version everyone sees, the full text behind "More details"
+CONSENT_SHORT = """A short study for my bachelor thesis at the University of St. Gallen (HSG).
+
+- You play 25 short games with doors and answer a few questions (about 10 minutes).
+- You can win real money: two participants are drawn at random.
+- Your answers are anonymous. You don't need to give your name or email.
+- Taking part is voluntary, and you can stop at any time.
+- You must be at least 18 years old.
+
+Questions? joo-ran.schaerer@student.unisg.ch"""
+CONSENT_MORE = "More details about the study and your data"
 CONSENT_TEXT = """**What is this study about?**
 I'm Joo-Ran Schärer, and this study is part of my bachelor thesis at
 the University of St. Gallen (HSG). It looks at how people make decisions in a simple game with doors.
