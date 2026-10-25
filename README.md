@@ -49,6 +49,26 @@ Download the data repo (GitHub → Code → Download ZIP), unzip, then:
 python export.py montyhall-data-main/data/real out/
 ```
 
+## Analysis
+The rules (test directions, thresholds, belief bands) are fixed at the top of
+`analysis.py` since 25 Oct 2026, before data collection. `tests/test_analysis.py`
+fails if anyone changes them.
+```
+pip install -r requirements-analysis.txt
+python export.py montyhall-data-main/data/real out/            # optional: CSV tables
+python analysis.py montyhall-data-main/data/real results/      # all tests -> results/results.md
+```
+Output: `results.md` (H1, H2, H3a, H3b, patterns x beliefs, robustness checks),
+`participants_summary.csv`, `crosstab_*.csv`, `learning.csv`, `scatter.png`.
+
+Test the analysis on fake data first:
+```
+python simulate_participants.py 60 data/fake
+python analysis.py data/fake results_fake/
+```
+Fake files contain the true type (`_true_type`), so `results.md` then also shows
+how well the patterns find the types.
+
 ## Fields that differ from the brief
 - Balancing: a new participant gets the sequence with fewer *completed + currently playing* people (playing = started in the last 45 min). Simultaneous starts are handled one after the other. The counts at that moment are saved as `assign_counts`.
 - File name contains the sequence (`ABC234_A.json`).
