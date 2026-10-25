@@ -15,7 +15,7 @@ NOT_OPEN = "The study isn't open yet. Please try again later."
 # 1. Consent
 CONSENT_TEXT = """**What is this study about?**
 I'm Joo-Ran Schärer, and this study is part of my bachelor thesis at
-[UNIVERSITY]. It looks at how people make decisions in a simple game with doors.
+the University of St. Gallen (HSG). It looks at how people make decisions in a simple game with doors.
 
 **What will you do?**
 You play 25 short games and answer a few questions.
@@ -43,7 +43,7 @@ before 15 November 2026.
 Everyone who is at least 18 years old.
 
 **Questions?**
-Write to me at [YOUR UNIVERSITY EMAIL]."""
+Write to me at joo-ran.schaerer@student.unisg.ch."""
 CONSENT_CHECKBOX = "I am at least 18 years old, I have read this information and I agree to take part."
 NO_REFRESH = "Please don't refresh or close this page during the study."
 
