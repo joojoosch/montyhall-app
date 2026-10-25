@@ -3,6 +3,7 @@
 # won't start until it is replaced.
 
 import config
+import game
 
 TITLE = "The door game"
 CONTINUE = "Continue"
@@ -120,10 +121,14 @@ PAYOFFS = {
 }
 STAY_BUTTON = "Stay with door {door}"
 SWITCH_BUTTON = "Switch to door {door}"
-WIN = "You found the trophy."
+WIN = "You found the trophy!"
 LOSE = "No trophy. It was behind door {door}."
-TRIAL_POINTS = "+{points} points"
-PENALTY_NOTE = "75 instead of 100 because of the penalty."
+POINTS_UNIT = "points"
+PENALTY_NOTE = "100 minus 25 for the penalty"
+# money bar under the result ("if you are drawn", because only 2 people get paid)
+WALLET_LEFT = "Total: {points} points"
+WALLET_RIGHT = "{chf} if drawn"
+WALLET_MAX = "max. {chf}"
 TAG_PICK = "Your pick"
 TAG_FINAL = "Your choice"
 EMPTY = "Empty"
@@ -134,6 +139,9 @@ def counter(trial_in_block, n_in_block):
 
 
 def total(points):
+    # shown at the top right during the games
+    if config.SHOW_MONEY:
+        return f"{points} points · {game.chf(points)}"
     return f"{points} points"
 
 
@@ -166,7 +174,7 @@ PILOT_QUESTION = "Was anything unclear or confusing?"
 
 # End
 END_HEADER = "Thank you!"
-END_POINTS = "You collected {points} points."
+END_POINTS = "You collected **{points} points**. If you are drawn, you get **{chf}**."
 END_CODE_LABEL = "Your personal code"
 END_TEXT = """Please save this code. After the study, two participants are
 drawn at random. To be contacted if you win, enter your code and contact

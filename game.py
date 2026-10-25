@@ -98,6 +98,16 @@ def total_trials():
     return config.N_CONTROL + 2 * config.N_PENALTY
 
 
+def max_points():
+    # 25 wins without penalty = 2,500 points
+    return total_trials() * config.POINTS_WIN
+
+
+def chf(points):
+    # money value of points, e.g. 1125 -> "CHF 22.50"
+    return f"CHF {points * config.CHF_PER_POINT:.2f}"
+
+
 def assign_sequence(counts=None, rng=None):
     # give the sequence with fewer people so far, random if it's a tie
     counts = counts or {}

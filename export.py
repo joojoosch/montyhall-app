@@ -19,7 +19,7 @@ PARTICIPANT_FIELDS = [
     "prior_knowledge", "age", "gender", "student_status", "field_of_study",
     "pilot_feedback", "total_points", "n_trials",
     "comp_control_attempts", "comp_pen_switch_attempts", "comp_pen_stay_attempts",
-    "comp_wrong",
+    "comp_wrong", "assign_counts",
 ]
 TRIAL_FIELDS = [
     "participant_id", "sequence", "trial_overall", "block", "block_order",
@@ -32,7 +32,7 @@ TRIAL_FIELDS = [
 def load_all(folder):
     recs = []
     for name in sorted(os.listdir(folder)):
-        if name.endswith(".json"):
+        if name.endswith(".json"):  # skips the "completed" marker folder
             with open(os.path.join(folder, name), encoding="utf-8") as f:
                 recs.append(json.load(f))
     return recs
@@ -41,6 +41,7 @@ def load_all(folder):
 def participant_row(rec):
     row = {k: rec.get(k) for k in PARTICIPANT_FIELDS}
     row["n_trials"] = len(rec.get("trials", []))
+    row["assign_counts"] = json.dumps(rec.get("assign_counts"))
     comp = rec.get("comprehension", {})
     for block in ("control", "pen_switch", "pen_stay"):
         row[f"comp_{block}_attempts"] = comp.get(block, {}).get("attempts")

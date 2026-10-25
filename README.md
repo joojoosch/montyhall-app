@@ -5,7 +5,8 @@
 |---|---|
 | `app.py` | the screens (Streamlit) |
 | `texts.py` | **all participant texts**: edit wording here only |
-| `style.py` | colours, font and the look of the doors |
+| `style.py` | colours, font, doors and the result card |
+| `balance.py` | keeps sequence A and B balanced |
 | `config.py` | constants: trials, points, `MODE`, `CONTACT_FORM_URL`, `SHOW_DEBRIEF` |
 | `game.py` | game rules (host, points, sequence, code) |
 | `session.py` | participant record, order of screens, resume after refresh |
@@ -40,7 +41,7 @@ In `config.py` set `MODE = "real"` and commit. Before that, fill `CONSENT_TEXT` 
 **Wake the app** (open the link yourself) before launch and before every reminder: free apps sleep after 12 hours without visits.
 
 ## Where the data is
-Private repo `montyhall-data`, one file per participant: `data/{mode}/{code}_{sequence}.json`. Dropouts stay with `"completed": false`. Saved after consent, after every trial and after every screen.
+Private repo `montyhall-data`, one file per participant: `data/{mode}/{code}_{sequence}.json`. Dropouts stay with `"completed": false`. Finished participants also get an empty marker in `data/{mode}/completed/` (used for balancing A and B). Saved after consent, after every trial and after every screen.
 
 ## Export to CSV
 Download the data repo (GitHub → Code → Download ZIP), unzip, then:
@@ -49,7 +50,8 @@ python export.py montyhall-data-main/data/real out/
 ```
 
 ## Fields that differ from the brief
-- File name contains the sequence (`ABC234_A.json`), so balancing needs only one API call.
+- Balancing: a new participant gets the sequence with fewer *completed + currently playing* people (playing = started in the last 45 min). Simultaneous starts are handled one after the other. The counts at that moment are saved as `assign_counts`.
+- File name contains the sequence (`ABC234_A.json`).
 - Extra fields: `resumed`, `resume_count` (participant level), `after_resume` (trial level), `field_of_study`, `start_epoch`.
 - `penalty_applied` = 1 only when a win came through the penalised option (points really reduced).
 - Response times are measured on the server, so they include internet delay. Use them only roughly.

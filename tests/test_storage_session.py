@@ -149,15 +149,21 @@ def test_github_gives_up_and_reports_failure():
     assert fake2.puts == 1  # wrong token: no pointless retries
 
 
-def test_github_count_sequences_and_pilot_real_separation():
+def test_github_counts_only_completed_and_separates_pilot_real():
     fake = FakeGitHub()
     s = _gh(fake)
-    assert s.count_sequences("real") == {"A": 0, "B": 0}
+    assert s.count_completed("real") == {"A": 0, "B": 0}
     for i, seq in enumerate("AABAB"):
-        s.save(sess.new_record(f"P{i}AAAA", "pilot", seq))
-    s.save(sess.new_record("R1AAAA", "real", "B"))
-    assert s.count_sequences("pilot") == {"A": 3, "B": 2}
-    assert s.count_sequences("real") == {"A": 0, "B": 1}
+        rec = sess.new_record(f"P{i}AAAA", "pilot", seq)
+        s.save(rec)
+        if i < 4:                      # P4 drops out: not counted
+            assert s.mark_completed(rec)
+    assert s.mark_completed(sess.new_record("P0AAAA", "pilot", "A"))  # twice is fine
+    real = sess.new_record("R1AAAA", "real", "B")
+    s.save(real)
+    s.mark_completed(real)
+    assert s.count_completed("pilot") == {"A": 3, "B": 1}
+    assert s.count_completed("real") == {"A": 0, "B": 1}
 
 
 # ---------- local storage ----------
@@ -169,8 +175,10 @@ def test_local_roundtrip_and_counts():
         assert s.save(rec)
         assert s.load("pilot", "XYZ789", "B")["sequence"] == "B"
         assert s.load("pilot", "NOPE22", "B") is None
-        assert s.count_sequences("pilot") == {"A": 0, "B": 1}
-        assert s.count_sequences("real") == {"A": 0, "B": 0}
+        assert s.count_completed("pilot") == {"A": 0, "B": 0}  # not finished yet
+        assert s.mark_completed(rec)
+        assert s.count_completed("pilot") == {"A": 0, "B": 1}
+        assert s.count_completed("real") == {"A": 0, "B": 0}
 
 
 # ---------- session flow ----------

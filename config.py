@@ -4,9 +4,11 @@ N_CONTROL = 5          # games in the normal block
 N_PENALTY = 10         # games in each penalty block
 POINTS_WIN = 100       # points for finding the trophy
 PENALTY = 25           # taken off when you win with the penalised option
+CHF_PER_POINT = 0.02   # 20 Rappen per 10 points
+SHOW_MONEY = True      # show the CHF value next to the points
 
 MODE = "pilot"         # "pilot" or "real" - decides the data folder
-APP_VERSION = "0.2.0"
+APP_VERSION = "0.3.0"
 CONTACT_FORM_URL = ""  # link to the separate contact form
 
 # Off for now: if the end screen says "switching wins 2 of 3", people could
@@ -30,3 +32,7 @@ SEQUENCES = {
 # personal code: no 0/O, 1/I/L so nobody mixes them up
 CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
 CODE_LENGTH = 6
+
+# balancing A/B: someone who started but hasn't finished after this many
+# minutes counts as a dropout and no longer as "currently playing"
+ACTIVE_TIMEOUT_MIN = 45

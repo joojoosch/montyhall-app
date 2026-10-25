@@ -13,6 +13,7 @@ import streamlit as st
 
 import config
 import game
+from balance import Balancer
 import session as sess
 import style
 import texts
@@ -25,6 +26,12 @@ S = st.session_state
 
 
 # ---------- helpers ----------
+
+@st.cache_resource
+def get_balancer():
+    # one Balancer shared by all participants (same app process)
+    return Balancer()
+
 
 def get_storage():
     # GitHub if the secrets are set, otherwise a local folder (for testing)
@@ -134,9 +141,12 @@ def check_mode():
 def on_consent():
     if S.rec is not None or not S.get("consent_cb"):
         return
-    # balanced: give the sequence that has fewer participants so far
-    seq = game.assign_sequence(get_storage().count_sequences(config.MODE))
-    S.rec = sess.new_record(game.make_code(), config.MODE, seq)
+    # balanced: the sequence with fewer completed + currently playing people
+    pid = game.make_code()
+    seq, counts = get_balancer().assign(
+        config.MODE, pid, lambda: get_storage().count_completed(config.MODE))
+    S.rec = sess.new_record(pid, config.MODE, seq)
+    S.rec["assign_counts"] = counts  # what the balance looked like (for the method part)
     S.need_save = True  # the file is created right after consent
 
 
@@ -267,14 +277,14 @@ def screen_block(idx):
         right.button(texts.SWITCH_BUTTON.format(door=other), key=f"switch_{t['id']}",
                      on_click=on_choice, args=(t["id"], "switch"))
 
-    else:  # feedback: show what was behind every door
+    else:  # feedback: show what was behind every door, then the result card
         r = t["result"]
         states = {d: ("trophy" if d == t["trophy"] else "open") for d in config.DOORS}
-        doors_row(states, {r["final_door"]: f"<b>{texts.TAG_FINAL}</b>"})
-        head = texts.WIN if r["won"] else texts.LOSE.format(door=t["trophy"])
-        note = f'<div class="note">{texts.PENALTY_NOTE}</div>' if r["penalty_applied"] else ""
-        html(f'<div class="result"><div class="head">{head}</div>'
-             f'<div class="pts">{texts.TRIAL_POINTS.format(points=r["points"])}</div>{note}</div>')
+        for col, d in zip(st.columns(3), config.DOORS):
+            with col:
+                tag = f"<b>{texts.TAG_FINAL}</b>" if d == r["final_door"] else ""
+                html(style.door(d, states[d], tag, won=bool(r["won"])))
+        html(style.result_card(r, S.rec["total_points"]))
         st.button(texts.NEXT, key=f"go_next_{t['id']}", on_click=on_next_trial, args=(t["id"],))
 
 
@@ -363,7 +373,8 @@ def on_retry():
 def screen_end():
     link = config.CONTACT_FORM_URL or "[link missing]"
     st.header(texts.END_HEADER)
-    st.markdown(texts.END_POINTS.format(points=S.rec["total_points"]))
+    st.markdown(texts.END_POINTS.format(points=S.rec["total_points"],
+                                        chf=game.chf(S.rec["total_points"])))
     st.caption(texts.END_CODE_LABEL)
     html(f'<div class="code">{S.rec["participant_id"]}</div>')
     st.markdown(texts.END_TEXT.format(link=link))
@@ -391,7 +402,8 @@ def main():
     step = S.rec["step"]
     if step == "end" and S.need_save:  # last save before the thank-you screen
         S.need_save = False
-        save()
+        if save() and get_storage().mark_completed(S.rec):
+            get_balancer().finish(S.rec["participant_id"])
 
     progress_bar()
     if step == "prize":

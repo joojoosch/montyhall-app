@@ -2,7 +2,9 @@
 # local folder when testing on my own computer.
 #
 # File name: data/{mode}/{code}_{sequence}.json
-# The sequence is in the name so I can count A and B with one request.
+# When someone finishes, an empty marker data/{mode}/completed/{code}_{sequence}
+# is added too. That way I can count finished people per sequence with one
+# request (for balancing A and B) without opening every file.
 # Every save writes the whole file, so if one save fails, the next one
 # contains everything again.
 
@@ -21,13 +23,17 @@ def file_path(mode, pid, sequence):
     return f"data/{mode}/{pid}_{sequence}.json"
 
 
+def marker_path(mode, pid, sequence):
+    return f"data/{mode}/completed/{pid}_{sequence}"
+
+
 def count_from_names(names):
+    # "K7M3PX_A" -> one more for A
     counts = {"A": 0, "B": 0}
     for n in names:
-        if n.endswith("_A.json"):
-            counts["A"] += 1
-        elif n.endswith("_B.json"):
-            counts["B"] += 1
+        seq = n.rsplit(".", 1)[0][-2:]
+        if seq in ("_A", "_B"):
+            counts[seq[1]] += 1
     return counts
 
 
@@ -62,8 +68,14 @@ class LocalStorage:
         with open(path, encoding="utf-8") as f:
             return json.load(f)
 
-    def count_sequences(self, mode):
-        folder = self._full(f"data/{mode}")
+    def mark_completed(self, rec):
+        path = self._full(marker_path(rec["mode"], rec["participant_id"], rec["sequence"]))
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        open(path, "w").close()
+        return True
+
+    def count_completed(self, mode):
+        folder = self._full(f"data/{mode}/completed")
         if not os.path.isdir(folder):
             return {"A": 0, "B": 0}
         return count_from_names(os.listdir(folder))
@@ -112,11 +124,18 @@ class GitHubStorage:
 
     def save(self, rec):
         path = file_path(rec["mode"], rec["participant_id"], rec["sequence"])
-        content = base64.b64encode(
-            json.dumps(rec, ensure_ascii=False, indent=1).encode("utf-8")).decode("ascii")
+        text = json.dumps(rec, ensure_ascii=False, indent=1)
+        return self._put(path, text, f"data {rec['participant_id']} {rec['step']}")
+
+    def mark_completed(self, rec):
+        path = marker_path(rec["mode"], rec["participant_id"], rec["sequence"])
+        return self._put(path, "", f"completed {rec['participant_id']}", create_only=True)
+
+    def _put(self, path, text, message, create_only=False):
+        # create or update one file, with retries
+        content = base64.b64encode(text.encode("utf-8")).decode("ascii")
         for attempt in range(1, self.max_attempts + 1):
-            body = {"message": f"data {rec['participant_id']} {rec['step']}",
-                    "content": content, "branch": self.branch}
+            body = {"message": message, "content": content, "branch": self.branch}
             if path in self._sha:
                 body["sha"] = self._sha[path]
             try:
@@ -133,6 +152,8 @@ class GitHubStorage:
             if status in (401, 404):
                 # wrong token or repo name, retrying won't help
                 return False
+            if status == 422 and create_only:
+                return True  # marker already exists, that's fine
             if status in (409, 422):
                 # clash or outdated version id: get the current one and retry
                 self._refresh_sha(path)
@@ -153,14 +174,14 @@ class GitHubStorage:
         self._sha[path] = data["sha"]
         return json.loads(base64.b64decode(data["content"]).decode("utf-8"))
 
-    def count_sequences(self, mode):
+    def count_completed(self, mode):
         try:
-            r = self._get(f"data/{mode}")
+            r = self._get(f"data/{mode}/completed")
             if r.status_code == 200:
                 return count_from_names(item["name"] for item in r.json())
         except Exception as e:
             _log(f"count failed: {e}")
-        return {"A": 0, "B": 0}  # no folder yet or error -> random sequence
+        return {"A": 0, "B": 0}  # nobody finished yet, or an error
 
 
 def make_storage(secrets):
