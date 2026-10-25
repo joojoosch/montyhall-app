@@ -193,3 +193,61 @@ def make_storage(secrets):
     except Exception:
         return LocalStorage()
     return GitHubStorage(repo, token, branch)
+
+
+class BackgroundSaver:
+    """Saves in the background, so participants never wait for GitHub.
+
+    One saver per participant. It always writes the NEWEST version of the
+    file: if several saves are asked for while one is running, only the
+    latest is written (it contains everything anyway), so an older version
+    can never overwrite a newer one.
+    """
+
+    def __init__(self, storage, idle_exit_s=3 * 3600):
+        import copy
+        import threading
+        self._copy = copy.deepcopy
+        self.storage = storage
+        self.cv = threading.Condition()
+        self.pending = None        # (version, record) waiting to be written
+        self.version = 0           # newest version asked for
+        self.saved_version = 0     # newest version GitHub confirmed
+        self.last_ok = True
+        self.idle_exit_s = idle_exit_s
+        self.thread = threading.Thread(target=self._run, daemon=True)
+        self.thread.start()
+
+    def submit(self, rec):
+        with self.cv:
+            self.version += 1
+            self.pending = (self.version, self._copy(rec))
+            self.cv.notify_all()
+
+    def _run(self):
+        while True:
+            with self.cv:
+                if self.pending is None:
+                    self.cv.wait(timeout=self.idle_exit_s)
+                    if self.pending is None:
+                        return  # nobody has used this saver for hours: stop the thread
+                version, rec = self.pending
+                self.pending = None
+            try:
+                ok = self.storage.save(rec)
+            except Exception as e:
+                _log(f"background save crashed: {e}")
+                ok = False
+            with self.cv:
+                self.last_ok = ok
+                if ok:
+                    self.saved_version = max(self.saved_version, version)
+                self.cv.notify_all()
+
+    def flush(self, timeout=30):
+        """Wait until the newest version is saved. True if it was."""
+        with self.cv:
+            self.cv.wait_for(lambda: self.pending is None and
+                             (self.saved_version == self.version or not self.last_ok),
+                             timeout=timeout)
+            return self.pending is None and self.saved_version == self.version

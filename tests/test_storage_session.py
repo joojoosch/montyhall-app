@@ -285,3 +285,56 @@ def test_export_csv():
         assert any("DROP22" in line and "False" in line for line in lines)
         assert "first_game_reason" in lines[0]
         assert sum("try_out" in line for line in lines) == 2  # the two finished people
+
+
+# ---------- background saving ----------
+
+class SlowStorage:
+    # pretends every save takes a while, and remembers the order of writes
+    def __init__(self, delay=0.05, fail=False):
+        import threading
+        self.delay, self.fail = delay, fail
+        self.written = []
+        self.lock = threading.Lock()
+
+    def save(self, rec):
+        import time
+        time.sleep(self.delay)
+        if self.fail:
+            return False
+        with self.lock:
+            self.written.append(len(rec["trials"]))
+        return True
+
+
+def test_background_saver_writes_newest_and_never_goes_back():
+    from storage import BackgroundSaver
+    st = SlowStorage()
+    saver = BackgroundSaver(st)
+    rec = sess.new_record("BGS234", "pilot", "A")
+    rec["step"] = "block_0"
+    for _ in range(5):                 # 5 quick games, faster than saving
+        sess.record_trial(rec, 0, 1, 1, 2, "stay", 500, 500)
+        saver.submit(rec)
+    assert saver.flush(timeout=5)
+    assert st.written[-1] == 5                     # the newest version is saved
+    assert st.written == sorted(st.written)        # never an older one after a newer one
+    assert len(st.written) < 5                     # in-between versions were skipped
+
+
+def test_background_saver_reports_failure():
+    from storage import BackgroundSaver
+    saver = BackgroundSaver(SlowStorage(fail=True))
+    saver.submit(sess.new_record("BGS234", "pilot", "A"))
+    assert saver.flush(timeout=5) is False
+
+
+def test_background_saver_copies_the_record():
+    from storage import BackgroundSaver
+    st = SlowStorage(delay=0.2)
+    saver = BackgroundSaver(st)
+    rec = sess.new_record("BGS234", "pilot", "A")
+    saver.submit(rec)
+    rec["trials"].append({"changed": "after submit"})   # the app keeps playing
+    assert saver.flush(timeout=5)
+    assert st.written == [0]   # what was saved is the state at submit time

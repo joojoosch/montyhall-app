@@ -73,9 +73,8 @@ RULES_HEADER_NEW = "Part {part} of 3: new rule"
 RULES_CONTROL = """Behind one of three doors is a trophy.
 
 1. You pick a door.
-2. The host opens one of the other two doors. This door is always empty
-   and never your door. If your door has the trophy, he opens one of the
-   other two at random.
+2. The host opens one of the two doors you didn't pick. He always opens
+   an empty door. If both are empty, he picks one at random.
 3. After the host has opened a door, you can either stay with your door or
    switch to the other door that is still closed.
 
@@ -196,7 +195,7 @@ WALLET_MAX = "max. {chf}"
 # 7. Belief question (after game 5 and after game 25)
 BELIEF_HEADER = "One question"
 BELIEF_QUESTION = """After the host opens a door: how likely do you think it is
-that the trophy is behind the **closed door you did not pick first**?
+that the trophy is behind the **closed door you did not pick**?
 
 Answer from your feeling while playing. Don't calculate.
 (Your answer does not affect your points.)"""

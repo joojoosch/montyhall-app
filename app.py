@@ -18,7 +18,7 @@ from balance import Balancer
 import session as sess
 import style
 import texts
-from storage import make_storage
+from storage import BackgroundSaver, make_storage
 
 st.set_page_config(page_title=texts.TITLE, page_icon="🚪", layout="centered",
                    initial_sidebar_state="collapsed")
@@ -45,8 +45,21 @@ def get_storage():
     return S.storage
 
 
+def get_saver():
+    if "saver" not in S:
+        S.saver = BackgroundSaver(get_storage())
+    return S.saver
+
+
 def save():
-    ok = get_storage().save(S.rec)
+    # hand the file to the background saver: the participant doesn't wait
+    get_saver().submit(S.rec)
+
+
+def save_and_wait():
+    # only at the very end: make sure everything is really saved
+    get_saver().submit(S.rec)
+    ok = get_saver().flush(timeout=30)
     S.last_save_ok = ok
     if not ok:
         print(f"[app] SAVE FAILED {S.rec['participant_id']} at {S.rec['step']}",
@@ -432,7 +445,7 @@ def main():
     step = S.rec["step"]
     if step == "end" and S.need_save:  # last save before the thank-you screen
         S.need_save = False
-        if save() and get_storage().mark_completed(S.rec):
+        if save_and_wait() and get_storage().mark_completed(S.rec):
             get_balancer().finish(S.rec["participant_id"])
 
     # Keep the ID in the URL so a refresh can continue where it stopped.
@@ -465,11 +478,10 @@ def main():
     elif step == "end":
         screen_end()
 
-    # save after drawing the screen, so nobody waits for GitHub
+    # save in the background, so nobody waits for GitHub
     if S.need_save:
         S.need_save = False
-        if not save():
-            st.caption(texts.SAVE_DELAY)
+        save()
 
 
 main()
