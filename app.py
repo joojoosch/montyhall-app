@@ -144,7 +144,7 @@ def check_mode():
     if get_storage().kind != "github":
         problems.append("GitHub secrets missing")
     if problems:
-        st.error("The study isn't open yet. Please try again later.")
+        st.error(texts.NOT_OPEN)
         print(f"[app] real mode blocked: {problems}", file=sys.stderr, flush=True)
         st.stop()
 
@@ -275,7 +275,7 @@ def screen_block(idx):
         doors_row({d: "closed" for d in config.DOORS}, {})
         html(f'<div class="prompt">{texts.PICK_PROMPT}</div>')
         for col, d in zip(st.columns(3), config.DOORS):
-            button(col, f"Door {d}", key=f"pick_{t['id']}_{d}", on_click=on_pick, args=(t["id"], d))
+            button(col, texts.DOOR_BUTTON.format(door=d), key=f"pick_{t['id']}_{d}", on_click=on_pick, args=(t["id"], d))
 
     elif t["phase"] == "decide":
         other = game.remaining_door(t["pick"], t["opened"])
@@ -322,7 +322,7 @@ def screen_belief(num):
     st.markdown(texts.BELIEF_QUESTION)
     # value=None: empty field, so nobody is anchored on a default number
     st.number_input(texts.BELIEF_LABEL, min_value=0, max_value=100, step=1, value=None,
-                    placeholder="0 to 100", key=f"belief_in_{num}")
+                    placeholder=texts.BELIEF_PLACEHOLDER, key=f"belief_in_{num}")
     button(st, texts.NEXT, key=f"go_belief_{num}", on_click=on_belief, args=(num,))
     show_msg()
 
@@ -356,7 +356,9 @@ def on_reason():
 
 
 def screen_reason():
-    st.radio(texts.REASON_QUESTION, list(texts.REASON_OPTIONS), index=None,
+    # the question reminds them what they actually did in game 1
+    first = S.rec["trials"][0]["choice"] if S.rec["trials"] else None
+    st.radio(texts.reason_question(first), list(texts.REASON_OPTIONS), index=None,
              format_func=texts.REASON_OPTIONS.get, key="reason_in")
     button(st, texts.NEXT, key="go_reason", on_click=on_reason)
     show_msg()
@@ -375,7 +377,7 @@ def on_demo():
 def screen_demo():
     st.header(texts.DEMO_HEADER)
     st.caption(texts.DEMO_NOTE)
-    st.number_input(texts.AGE_LABEL, min_value=15, max_value=99, step=1, value=None, key="age_in")
+    st.number_input(texts.AGE_LABEL, min_value=18, max_value=99, step=1, value=None, key="age_in")
     st.radio(texts.GENDER_LABEL, texts.GENDER_OPTIONS, index=None, key="gender_in")
     st.radio(texts.STUDENT_LABEL, texts.STUDENT_OPTIONS, index=None, key="student_in")
     st.text_input(texts.FIELD_LABEL, max_chars=60, key="field_in")
