@@ -8,7 +8,7 @@ CHF_PER_POINT = 0.02   # 20 Rappen per 10 points
 SHOW_MONEY = True      # show the CHF value next to the points
 
 MODE = "pilot"         # "pilot" or "real" - decides the data folder
-APP_VERSION = "0.6.0"
+APP_VERSION = "0.7.0"
 # link to the separate prize form (Microsoft Forms)
 CONTACT_FORM_URL = "https://forms.cloud.microsoft/Pages/ResponsePage.aspx?id=WS4mp1YbWk-kEm8HGB9I7oYMwjPp3dNGjjWAAXGEFDlUOENSNExRMEpWR1FGME45RUJIRDhPVFo1Ui4u"
 

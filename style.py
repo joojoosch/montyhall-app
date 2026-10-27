@@ -69,7 +69,12 @@ div[class*="st-key-go"] button:hover, div[data-testid="stFormSubmitButton"] > bu
 }
 
 /* door buttons: same width as the door, centred under it */
-div[class*="st-key-pick_"] button { max-width: 150px !important; margin: 0 auto; display: block; }
+div[class*="st-key-pick_"] button, div[class*="st-key-stay_"] button,
+div[class*="st-key-switch_"] button, div[class*="st-key-opened_"] button {
+  max-width: 150px !important; margin: 0 auto; display: block;
+}
+/* the two choice buttons may need two lines on a phone */
+div[class*="st-key-stay_"] button p, div[class*="st-key-switch_"] button p { white-space: normal; line-height: 1.2; }
 
 /* keep the three doors (and Stay/Switch) side by side on phones */
 div[data-testid="stHorizontalBlock"] { flex-wrap: nowrap !important; gap: 0.6rem; }

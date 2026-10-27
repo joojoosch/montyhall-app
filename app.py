@@ -299,11 +299,18 @@ def screen_block(idx):
         doors_row(states, {t["pick"]: texts.TAG_PICK})
         html(f'<div class="prompt">{texts.DECIDE_PROMPT.format(opened=t["opened"])}</div>'
              f'<div class="payoffs">{"<br>".join(texts.PAYOFFS[block])}</div>')
-        left, right = st.columns(2)  # Stay always left, Switch always right
-        button(left, texts.STAY_BUTTON.format(door=t["pick"]), key=f"stay_{t['id']}",
-                    on_click=on_choice, args=(t["id"], "stay"))
-        button(right, texts.SWITCH_BUTTON.format(door=other), key=f"switch_{t['id']}",
-                     on_click=on_choice, args=(t["id"], "switch"))
+        # one button under each door, in the same place as in the pick step:
+        # Stay under your door, Switch under the other closed door, and the
+        # opened door's button greyed out
+        for col, d in zip(st.columns(3), config.DOORS):
+            if d == t["pick"]:
+                button(col, texts.STAY_BUTTON.format(door=d), key=f"stay_{t['id']}",
+                       on_click=on_choice, args=(t["id"], "stay"))
+            elif d == other:
+                button(col, texts.SWITCH_BUTTON.format(door=d), key=f"switch_{t['id']}",
+                       on_click=on_choice, args=(t["id"], "switch"))
+            else:
+                button(col, texts.DOOR_BUTTON.format(door=d), key=f"opened_{t['id']}", disabled=True)
 
     else:  # feedback: show what was behind every door, then the result card
         r = t["result"]
