@@ -94,3 +94,88 @@ def test_h1_without_try_out_leaves_them_out():
     main, check = an.test_h1(df), an.test_h1(df, without_try_out=True)
     assert main["n"] == len(df)
     assert check["n"] == int((df.first_game_reason != "try_out").sum()) < main["n"]
+
+
+# ---------- EXPLORATORY part (penalty questions) ----------
+# These tests make sure the exploratory part works AND never touches the
+# confirmatory results.
+
+def test_consistency_rule_both_parts():
+    c = an.consistency
+    # staying penalised: stayed more often = did the penalised option -> needs > 25
+    assert c("pen_stay", "stayed", "number", 40) == "consistent"
+    assert c("pen_stay", "stayed", "number", 25) == "contradiction"     # 25 is not above 25
+    assert c("pen_stay", "switched", "number", 25) == "consistent"
+    assert c("pen_stay", "switched", "number", 60) == "contradiction"
+    # switching penalised: mirror image (switched more often = did the penalised option)
+    assert c("pen_switch", "switched", "number", 40) == "consistent"
+    assert c("pen_switch", "switched", "number", 10) == "contradiction"
+    assert c("pen_switch", "stayed", "number", 10) == "consistent"
+    assert c("pen_switch", "stayed", "number", 60) == "contradiction"
+    # "always" answers must match the usual choice, in both parts
+    for part in ("pen_stay", "pen_switch"):
+        assert c(part, "stayed", "always_stay", None) == "consistent"
+        assert c(part, "stayed", "always_switch", None) == "contradiction"
+        assert c(part, "switched", "always_switch", None) == "consistent"
+        assert c(part, "switched", "always_stay", None) == "contradiction"
+        assert c(part, "equal", "number", 30) == "not checkable"
+
+
+def test_fake_data_has_all_threshold_cases():
+    import pandas as pd
+    folder = _fake_folder(300, seed=7)
+    _, complete = an.load(folder)
+    df = pd.DataFrame([an.summarise(r) for r in complete])
+    df["pattern"] = [an.pattern(a, b) for a, b in zip(df.pen_switch_stays, df.pen_stay_stays)]
+    df["band_1"] = [an.band(b) for b in df.belief_1]
+    t = an.threshold_table(df, complete)
+    assert set(t.consistency) == {"consistent", "contradiction", "not checkable"}
+    assert {"number", "always_stay", "always_switch"} <= set(t.type)
+    assert (t.variant == "equal").sum() > 0 and (t.stay_count == 5).sum() > 0   # exactly 5 of 10
+    share = (t.consistency == "contradiction").sum() / (t.consistency != "not checkable").sum()
+    assert 0.05 < share < 0.35                     # realistic, not all or nothing
+    for part in ("pen_stay", "pen_switch"):
+        for v in ("stayed", "switched"):
+            assert ((t.part == part) & (t.variant == v)).sum() > 0
+
+
+def test_exploratory_does_not_change_confirmatory_results():
+    import shutil
+    folder = _fake_folder(120, seed=11)
+    # same data without any threshold answers
+    bare = tempfile.mkdtemp()
+    for name in os.listdir(folder):
+        if name.endswith(".json"):
+            with open(os.path.join(folder, name)) as f:
+                rec = json.load(f)
+            rec["thresholds"], rec["threshold_order"] = None, None
+            with open(os.path.join(bare, name), "w") as f:
+                json.dump(rec, f)
+    out1, out2 = tempfile.mkdtemp(), tempfile.mkdtemp()
+    an.run(folder, out1)
+    an.run(bare, out2)
+    with open(os.path.join(out1, "results.md")) as f:
+        with_expl = f.read()
+    with open(os.path.join(out2, "results.md")) as f:
+        without = f.read()
+    marker = "## Exploratory results"
+    assert marker in with_expl and marker not in without
+    assert with_expl.split(marker)[0].rstrip() == without.rstrip()   # everything before is identical
+    for name in ("exploratory.md", "exploratory_thresholds.png", "exploratory_thresholds.csv",
+                 "exploratory_consistency.csv", "exploratory_by_variant.csv"):
+        assert os.path.exists(os.path.join(out1, name)), name
+    with open(os.path.join(out1, "exploratory.md")) as f:
+        text = f.read()
+    assert "Exploratory" in text and "not paid" in text and "p = " not in text   # no tests
+    shutil.rmtree(bare)
+
+
+def test_bootstrap_and_spearman_helpers():
+    import numpy as np
+    v = np.arange(1, 22)
+    lo, hi = an.boot_ci(v, np.median)
+    assert lo <= np.median(v) <= hi
+    assert an.boot_ci(v, np.median) == (lo, hi)          # fixed seed: same every time
+    r = an.spearman_ci(list(range(10)), list(range(10)))
+    assert abs(r["rho"] - 1) < 1e-9
+    assert an.spearman_ci([1, 2], [3, 4])["rho"] is None  # too few people

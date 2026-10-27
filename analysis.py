@@ -9,6 +9,9 @@ Writes into the output folder:
   crosstab_*.csv           choice pattern x belief band
   learning.csv             switching rate per game, split by sequence
   scatter.png              switching rate in the two penalty blocks, one dot per person
+  exploratory.md           EXPLORATORY: answers to the two penalty questions (not paid,
+                           not part of the fixed rules, no tests on subgroups)
+  exploratory_thresholds.csv / exploratory_thresholds.png
 
 The rules below were fixed on 25 October 2026, BEFORE data collection, and
 follow the design doc (section 6). The GitHub commit date is my proof of that.
@@ -385,10 +388,267 @@ def run(folder, out="results"):
         w("## Check on fake data (true type vs pattern)\n")
         w("```\n" + pd.crosstab(df._true_type, df.pattern).to_string() + "\n```\n")
 
+    # exploratory part: separate file, so the confirmatory results stay clean
+    if exploratory(df, complete, out):
+        w("## Exploratory results\n")
+        w("See exploratory.md. Not part of the fixed rules, not paid, descriptive only.\n")
+
     with open(os.path.join(out, "results.md"), "w", encoding="utf-8") as f:
         f.write("\n".join(L))
     print(f"{len(df)} complete participants analysed -> {out}/results.md")
     return df
+
+
+
+# =====================================================================================
+# EXPLORATORY: the two penalty questions ("thresh" screen, added 27 Oct 2026)
+# -------------------------------------------------------------------------------------
+# NOT part of the fixed rules above. The answers are hypothetical and not paid.
+# Descriptive only: no new hypotheses and no significance tests on subgroups.
+# Nothing here changes any number in results.md.
+# =====================================================================================
+
+BOOT_N = 2000          # bootstrap resamples for the confidence intervals
+BOOT_SEED = 20261027   # fixed, so the intervals are the same every time
+PART_NAMES = {"pen_stay": "staying was penalised", "pen_switch": "switching was penalised"}
+
+
+def did_penalised(part, variant):
+    # True if the person mostly chose the penalised option in that part
+    return (part == "pen_stay" and variant == "stayed") or \
+           (part == "pen_switch" and variant == "switched")
+
+
+def consistency(part, variant, ttype, value, penalty=25):
+    """Does the answer fit what the person did in that part?
+
+    Did the penalised option more often (kept doing it although it cost 25):
+        the reduction would have to be BIGGER to make them change -> value > 25.
+    Avoided the penalised option: they changed already at 25 -> value <= 25.
+    "always ..." answers must match the usual choice (stayed -> always_stay).
+    Exactly 5 of 10 ("equal"): no usual choice, so not checkable.
+    Note: for the switching-penalised part this mirrors the stay part, e.g.
+    "stayed more often" there means avoiding the penalty -> value <= 25.
+    """
+    if variant == "equal" or ttype is None:
+        return "not checkable"
+    if ttype in ("always_stay", "always_switch"):
+        usual = "always_stay" if variant == "stayed" else "always_switch"
+        return "consistent" if ttype == usual else "contradiction"
+    if did_penalised(part, variant):
+        return "consistent" if value > penalty else "contradiction"
+    return "consistent" if value <= penalty else "contradiction"
+
+
+def threshold_table(df, complete):
+    # one row per person and penalty part
+    info = df.set_index("participant_id")
+    rows = []
+    for rec in complete:
+        th = rec.get("thresholds") or {}
+        pid = rec["participant_id"]
+        for part in ("pen_stay", "pen_switch"):
+            a = th.get(part)
+            if not a or not a.get("threshold_type"):
+                continue
+            r = info.loc[pid]
+            rows.append({
+                "participant_id": pid, "sequence": rec["sequence"], "part": part,
+                "variant": a["threshold_variant"], "stay_count": a["stay_count"],
+                "position": a.get("position"), "type": a["threshold_type"],
+                "value": a["threshold_value"], "pattern": r["pattern"], "band_1": r["band_1"],
+                "belief_1": r["belief_1"], "control_stayer": r["control_stays"] >= STAYER_MIN,
+            })
+    t = pd.DataFrame(rows)
+    if not t.empty:
+        t["consistency"] = [consistency(p, v, ty, val) for p, v, ty, val
+                            in zip(t.part, t.variant, t.type, t.value)]
+    return t
+
+
+def boot_ci(values, stat, n=BOOT_N, seed=BOOT_SEED):
+    # percentile bootstrap 95% interval for any statistic
+    values = np.asarray(values)
+    if len(values) < 3:
+        return (None, None)
+    rng = np.random.default_rng(seed)
+    idx = rng.integers(0, len(values), size=(n, len(values)))
+    boots = np.array([stat(values[i]) for i in idx])
+    boots = boots[~np.isnan(boots)]
+    if not len(boots):
+        return (None, None)
+    return (float(np.percentile(boots, 2.5)), float(np.percentile(boots, 97.5)))
+
+
+def describe_values(v):
+    # n, median with bootstrap CI, quartiles (only answers with a number)
+    v = pd.Series(v, dtype=float).dropna()
+    if v.empty:
+        return {"n": 0, "median": None, "ci": (None, None), "q1": None, "q3": None}
+    return {"n": len(v), "median": float(v.median()), "ci": boot_ci(v.to_numpy(), np.median),
+            "q1": float(v.quantile(0.25)), "q3": float(v.quantile(0.75))}
+
+
+def spearman_ci(x, y):
+    # Spearman rho with a bootstrap 95% interval (no p-value: exploratory)
+    d = pd.DataFrame({"x": x, "y": y}).dropna().astype(float)
+    if len(d) < 4 or d.x.nunique() < 2 or d.y.nunique() < 2:
+        return {"n": len(d), "rho": None, "ci": (None, None)}
+    pairs = d.to_numpy()
+
+    def rho(sample):
+        if np.unique(sample[:, 0]).size < 2 or np.unique(sample[:, 1]).size < 2:
+            return np.nan
+        return stats.spearmanr(sample[:, 0], sample[:, 1])[0]
+
+    rng = np.random.default_rng(BOOT_SEED)
+    idx = rng.integers(0, len(pairs), size=(BOOT_N, len(pairs)))
+    boots = np.array([rho(pairs[i]) for i in idx])
+    boots = boots[~np.isnan(boots)]
+    ci = (float(np.percentile(boots, 2.5)), float(np.percentile(boots, 97.5))) if len(boots) else (None, None)
+    return {"n": len(d), "rho": float(stats.spearmanr(d.x, d.y)[0]), "ci": ci}
+
+
+def fmt_desc(r):
+    if not r["n"]:
+        return "no numbers"
+    ci = "n/a" if r["ci"][0] is None else f"{r['ci'][0]:.0f} to {r['ci'][1]:.0f}"
+    return (f"n={r['n']}, median {r['median']:.0f} (95% CI {ci}), "
+            f"quartiles {r['q1']:.0f} to {r['q3']:.0f}")
+
+
+def threshold_figure(t, path):
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    rng = np.random.default_rng(0)
+    fig, axes = plt.subplots(1, 2, figsize=(10, 4.8), sharey=True)
+    for ax, part in zip(axes, ("pen_stay", "pen_switch")):
+        d = t[t.part == part]
+        labels = []
+        for i, p in enumerate(PATTERNS):
+            g = d[d.pattern == p]
+            v = g[g.type == "number"].value.astype(float)
+            ax.scatter(i + rng.uniform(-0.15, 0.15, len(v)), v, s=28, alpha=0.7, color="#2a6fb0",
+                       edgecolors="white", zorder=3)
+            if len(v):
+                ax.plot([i - 0.3, i + 0.3], [v.median()] * 2, color="#b5651d", lw=2.5, zorder=4)
+            n_always = int((g.type != "number").sum())
+            labels.append(f"{p}\n(n={len(v)}" + (f", +{n_always} always" if n_always else "") + ")")
+        ax.axhline(25, color="#999", lw=0.8, ls="--", zorder=1)
+        ax.text(len(PATTERNS) - 0.5, 26, "25 = actual penalty", ha="right", va="bottom",
+                fontsize=7, color="#777")
+        ax.set_xticks(range(len(PATTERNS)))
+        ax.set_xticklabels(labels, fontsize=7)
+        ax.set_ylim(-5, 105)
+        ax.set_title(f"Part where {PART_NAMES[part]}", fontsize=10)
+    axes[0].set_ylabel("Stated threshold (points)")
+    fig.suptitle("EXPLORATORY: stated threshold by choice pattern (dots = people, line = median;\n"
+                 "hypothetical, not paid; 'always' answers are counted below, not plotted)", fontsize=9)
+    fig.tight_layout()
+    fig.savefig(path, dpi=200)
+    plt.close(fig)
+
+
+def exploratory(df, complete, out):
+    t = threshold_table(df, complete)
+    if t.empty:
+        return False
+    t.to_csv(os.path.join(out, "exploratory_thresholds.csv"), index=False)
+    L = []
+    w = L.append
+    w("# EXPLORATORY results: the two penalty questions\n")
+    w("**Exploratory.** These questions are hypothetical and not paid. They are not part of the "
+      "rules fixed on 25 Oct 2026, so the results are descriptive only: no new hypotheses and no "
+      "significance tests on subgroups. Intervals are bootstrap 95% intervals "
+      f"({BOOT_N} resamples).\n")
+    w(f"People with answers: {t.participant_id.nunique()}. Answers: {len(t)}.\n")
+
+    # 1. distribution by part and variant
+    w("## 1. Stated thresholds by part and variant\n")
+    rows = []
+    for part in ("pen_stay", "pen_switch"):
+        for variant in ("stayed", "switched", "equal"):
+            g = t[(t.part == part) & (t.variant == variant)]
+            if g.empty:
+                continue
+            r = describe_values(g[g.type == "number"].value)
+            n = len(g)
+            rows.append({"part": part, "variant": variant, "answers": n,
+                         "numbers": r["n"], "median": r["median"],
+                         "ci_low": r["ci"][0], "ci_high": r["ci"][1], "q1": r["q1"], "q3": r["q3"],
+                         "always_stay": int((g.type == "always_stay").sum()),
+                         "always_switch": int((g.type == "always_switch").sum())})
+            how = "stayed and switched equally often" if variant == "equal" else f"{variant} more often"
+            w(f"- {PART_NAMES[part]}, {how} ({n} answers): {fmt_desc(r)}. "
+              f"Always stay {pct((g.type == 'always_stay').mean())}, "
+              f"always switch {pct((g.type == 'always_switch').mean())}.")
+    pd.DataFrame(rows).to_csv(os.path.join(out, "exploratory_by_variant.csv"), index=False)
+    for part in ("pen_stay", "pen_switch"):
+        g = t[t.part == part]
+        w(f"- All answers, {PART_NAMES[part]}: always stay {pct((g.type == 'always_stay').mean())}, "
+          f"always switch {pct((g.type == 'always_switch').mean())}.")
+    w("")
+
+    # 2. consistency with behaviour
+    w("## 2. Do the answers fit what people did?\n")
+    w("Rule: whoever mostly chose the penalised option should name more than 25; whoever "
+      "mostly avoided it should name 25 or less. 'Always' answers should match the usual choice. "
+      "In the switching-penalised part this is the mirror image: there, 'stayed more often' "
+      "means avoiding the penalty, so 25 or less fits. Exactly 5 of 10 cannot be checked.\n")
+    checkable = t[t.consistency != "not checkable"]
+    k = int((checkable.consistency == "contradiction").sum())
+    w(f"- Contradictions: {k} of {len(checkable)} checkable answers "
+      f"({pct(k / len(checkable)) if len(checkable) else 'n/a'}); "
+      f"not checkable (5 of 10): {int((t.consistency == 'not checkable').sum())}.")
+    for part in ("pen_stay", "pen_switch"):
+        c = checkable[checkable.part == part]
+        kk = int((c.consistency == "contradiction").sum())
+        w(f"- {PART_NAMES[part]}: {kk} of {len(c)} ({pct(kk / len(c)) if len(c) else 'n/a'}).")
+    tab = pd.crosstab([t.part, t.variant], t.consistency)
+    tab.to_csv(os.path.join(out, "exploratory_consistency.csv"))
+    w("\n```\n" + tab.to_string() + "\n```\n")
+
+    # 3. medians by choice pattern and by belief band
+    w("## 3. Median thresholds by choice pattern and by belief band (belief 1)\n")
+    w("Choice patterns as in the fixed rules (7 of 10). Numbers only; 'always' answers counted separately.\n")
+    for part in ("pen_stay", "pen_switch"):
+        d = t[t.part == part]
+        w(f"**{PART_NAMES[part]}**\n")
+        for p in PATTERNS:
+            g = d[d.pattern == p]
+            if len(g):
+                w(f"- {p}: {fmt_desc(describe_values(g[g.type == 'number'].value))}; "
+                  f"always {int((g.type != 'number').sum())}")
+        for b in ("below", "50/50 band", "above"):
+            g = d[d.band_1 == b]
+            if len(g):
+                w(f"- belief 1 {b}: {fmt_desc(describe_values(g[g.type == 'number'].value))}; "
+                  f"always {int((g.type != 'number').sum())}")
+        w("")
+
+    # 4. correlation with belief 1
+    w("## 4. Spearman correlation: stated threshold and belief 1\n")
+    w("Numbers only. Bootstrap 95% interval, no p-values.\n")
+    for part in ("pen_stay", "pen_switch"):
+        d = t[(t.part == part) & (t.type == "number")]
+        for label, g in (("all", d), (f"control stayers (at least {STAYER_MIN} of 5)", d[d.control_stayer])):
+            r = spearman_ci(g.value, g.belief_1)
+            if r["rho"] is None:
+                w(f"- {PART_NAMES[part]}, {label}: not enough data (n={r['n']}).")
+            else:
+                w(f"- {PART_NAMES[part]}, {label}: rho = {r['rho']:+.2f}, "
+                  f"95% CI {r['ci'][0]:+.2f} to {r['ci'][1]:+.2f}, n={r['n']}.")
+    w("")
+
+    # 5. figure
+    threshold_figure(t, os.path.join(out, "exploratory_thresholds.png"))
+    w("## 5. Figure\n")
+    w("exploratory_thresholds.png: stated threshold by choice pattern, one panel per penalty part.\n")
+
+    with open(os.path.join(out, "exploratory.md"), "w", encoding="utf-8") as f:
+        f.write("\n".join(L))
+    return True
 
 
 if __name__ == "__main__":

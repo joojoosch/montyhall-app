@@ -77,13 +77,37 @@ def make_participant(ptype, sequence, rng, mode="fake", dropout=False):
                 [3, 3, 2, 3, 1])[0]
         elif step == "thresh":
             for block in rec["threshold_order"]:
-                ttype = rng.choices(list(sess.THRESH_TYPES), [6, 1, 1])[0]
-                sess.record_threshold(rec, block, ttype, rng.randint(0, 100))
+                ttype, value = threshold_answer(block, rec["thresholds"][block]["threshold_variant"], rng)
+                sess.record_threshold(rec, block, ttype, value)
         elif step == "demo":
             rec["age"] = rng.randint(19, 35)
             rec["gender"] = rng.choice(["female", "male", "diverse", "prefer not to say"])
         sess.advance(rec)
     return rec
+
+
+# How the fake people answer the two penalty questions (exploratory part).
+THRESH_ALWAYS = 0.15        # answer "always stay / always switch"
+THRESH_CONTRADICT = 0.15    # answer that doesn't fit what they did
+
+
+def threshold_answer(block, variant, rng):
+    """A realistic answer: mostly consistent, some contradictions, some 'always'."""
+    if rng.random() < THRESH_ALWAYS:
+        if variant == "equal":
+            return rng.choice(["always_stay", "always_switch"]), None
+        usual = "always_stay" if variant == "stayed" else "always_switch"
+        other = "always_switch" if usual == "always_stay" else "always_stay"
+        return (other if rng.random() < THRESH_CONTRADICT else usual), None
+    if variant == "equal":                       # 5 of 10: somewhere around the actual 25
+        return "number", rng.randint(10, 50)
+    did_penalised = (block == config.PEN_STAY and variant == "stayed") or \
+                    (block == config.PEN_SWITCH and variant == "switched")
+    high, low = rng.randint(30, 90), rng.randint(0, 25)   # above 25 / 25 or below
+    fits = rng.random() >= THRESH_CONTRADICT
+    if did_penalised:
+        return "number", high if fits else low
+    return "number", low if fits else high
 
 
 def texts_comprehension(block):

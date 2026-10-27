@@ -66,6 +66,11 @@ python analysis.py montyhall-data-main/data/real results/      # all tests -> re
 Output: `results.md` (H1, H2, H3a, H3b, patterns x beliefs, robustness checks),
 `participants_summary.csv`, `crosstab_*.csv`, `learning.csv`, `scatter.png`.
 
+**Exploratory part** (the two penalty questions, added 27 Oct): a separate block at the
+end of `analysis.py`, written to `exploratory.md`, `exploratory_*.csv` and
+`exploratory_thresholds.png`. Descriptive only, no tests on subgroups, not paid.
+It never changes `results.md` (tested in `tests/test_analysis.py`).
+
 Test the analysis on fake data first:
 ```
 python simulate_participants.py 60 data/fake
