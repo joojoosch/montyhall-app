@@ -83,27 +83,27 @@ Trophy found: **100 points**. No trophy: **0 points**."""
 
 # Penalty rules. The first penalty part says "same game, one change";
 # the second one has to say that the old penalty is gone.
-RULES_PEN_SWITCH = """Same game, one change: **switching away from your first choice now costs 25 points.**
+RULES_PEN_SWITCH = """Same game, one change: **switching away from your first choice now reduces the value of the trophy by 25 points.**
 
 - Win after switching: 75 points
 - Win after staying: 100 points
 - No trophy: 0 points"""
 
-RULES_PEN_STAY = """Same game, one change: **staying with your first choice now costs 25 points.**
+RULES_PEN_STAY = """Same game, one change: **staying with your first choice now reduces the value of the trophy by 25 points.**
 
 - Win after staying: 75 points
 - Win after switching: 100 points
 - No trophy: 0 points"""
 
 RULES_SECOND_PEN_SWITCH = """The rule changes: staying is free again, but
-**switching away from your first choice now costs 25 points.**
+**switching away from your first choice now reduces the value of the trophy by 25 points.**
 
 - Win after switching: 75 points
 - Win after staying: 100 points
 - No trophy: 0 points"""
 
 RULES_SECOND_PEN_STAY = """The rule changes: switching is free again, but
-**staying with your first choice now costs 25 points.**
+**staying with your first choice now reduces the value of the trophy by 25 points.**
 
 - Win after staying: 75 points
 - Win after switching: 100 points
