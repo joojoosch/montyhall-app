@@ -231,6 +231,56 @@ def reason_question(first_choice):
     return REASON_QUESTION_FALLBACK
 
 
+# Exploratory penalty questions (after the first-game question, before "About you").
+# One question per penalty part, both on one page, in random order.
+# Which text someone sees depends on what they did in that part (10 games):
+# 6-10 stays = "stayed", 0-4 stays = "switched", 5 stays = "equal".
+THRESH_HEADER = "Two last questions about the penalty"
+THRESH_NOTE = "These are hypothetical. Your answer does not affect your points."
+
+# part where STAYING reduced the value of the trophy
+THRESH_STAY_STAYED = ("In the part where staying with your first choice reduced the value of the "
+                      "trophy by 25 points, you more often stayed. How big would the reduction "
+                      "have to be for you to switch instead?")
+THRESH_STAY_SWITCHED = ("In the part where staying with your first choice reduced the value of the "
+                        "trophy by 25 points, you more often switched. How small would the "
+                        "reduction have to be for you to stay instead?")
+THRESH_STAY_EQUAL = ("In the part where staying with your first choice reduced the value of the "
+                     "trophy by 25 points, you stayed and switched equally often. From which size "
+                     "of the reduction on would you switch rather than stay?")
+
+# part where SWITCHING reduced the value of the trophy (mirror texts)
+THRESH_SWITCH_SWITCHED = ("In the part where switching to the other door reduced the value of the "
+                          "trophy by 25 points, you more often switched. How big would the "
+                          "reduction have to be for you to stay instead?")
+THRESH_SWITCH_STAYED = ("In the part where switching to the other door reduced the value of the "
+                        "trophy by 25 points, you more often stayed. How small would the "
+                        "reduction have to be for you to switch instead?")
+THRESH_SWITCH_EQUAL = ("In the part where switching to the other door reduced the value of the "
+                       "trophy by 25 points, you stayed and switched equally often. From which "
+                       "size of the reduction on would you stay rather than switch?")
+
+# answer: exactly one of these three (saved as the code on the left)
+THRESH_OPTIONS = {
+    "number": "A reduction of this size (enter below)",
+    "always_stay": "I would always stay, whatever the reduction",
+    "always_switch": "I would always switch, whatever the reduction",
+}
+THRESH_NUMBER_LABEL = "Size of the reduction in points (0 to 100)"
+THRESH_MISSING = ("Please answer both questions. If you choose a size, enter a whole number "
+                  "from 0 to 100.")
+
+
+def thresh_question(block, variant):
+    texts_for = {
+        config.PEN_STAY: {"stayed": THRESH_STAY_STAYED, "switched": THRESH_STAY_SWITCHED,
+                          "equal": THRESH_STAY_EQUAL},
+        config.PEN_SWITCH: {"stayed": THRESH_SWITCH_STAYED, "switched": THRESH_SWITCH_SWITCHED,
+                            "equal": THRESH_SWITCH_EQUAL},
+    }
+    return texts_for[block][variant]
+
+
 # 10. About you (all optional)
 DEMO_HEADER = "About you"
 DEMO_NOTE = "All questions are optional, so you can leave them empty if you want."

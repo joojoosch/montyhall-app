@@ -97,6 +97,9 @@ def _full_record(seq="A", mode="pilot", choose=None, rng=None):
             rec[step] = 50
         if step == "reason":
             rec["first_game_reason"] = "try_out"
+        if step == "thresh":
+            for b in rec["threshold_order"]:
+                sess.record_threshold(rec, b, "number", 30)
         sess.advance(rec)
     return rec
 
@@ -338,3 +341,119 @@ def test_background_saver_copies_the_record():
     rec["trials"].append({"changed": "after submit"})   # the app keeps playing
     assert saver.flush(timeout=5)
     assert st.written == [0]   # what was saved is the state at submit time
+
+
+# ---------- exploratory penalty questions ("thresh") ----------
+
+def _rec_with_part(block, stays, seq="A"):
+    # a record where the given penalty part has exactly `stays` stays out of 10
+    rec = sess.new_record("THR234", "pilot", seq)
+    idx = [b for b, _, _ in game.block_plan(seq)].index(block)
+    rec["step"] = f"block_{idx}"
+    for i in range(10):
+        sess.record_trial(rec, idx, 1, 1, 2, "stay" if i < stays else "switch", 500, 500)
+    return rec
+
+
+def test_threshold_variant_counts():
+    # 6-10 stays = stayed, 0-4 = switched, exactly 5 = equal
+    expected = {0: "switched", 1: "switched", 4: "switched", 5: "equal",
+                6: "stayed", 9: "stayed", 10: "stayed"}
+    for stays, variant in expected.items():
+        assert sess.threshold_variant(stays) == variant, stays
+    for block in (config.PEN_STAY, config.PEN_SWITCH):
+        for stays, variant in expected.items():
+            rec = _rec_with_part(block, stays)
+            sess.prepare_thresholds(rec, random.Random(1))
+            part = rec["thresholds"][block]
+            assert part["stay_count"] == stays
+            assert part["threshold_variant"] == variant
+
+
+def test_threshold_texts_follow_the_brief():
+    # stay-penalty part: count stays; switching-penalty part: count switches (= mirror)
+    cases = [
+        (config.PEN_STAY, 10, texts.THRESH_STAY_STAYED, "How big", "switch instead"),
+        (config.PEN_STAY, 0, texts.THRESH_STAY_SWITCHED, "How small", "stay instead"),
+        (config.PEN_STAY, 5, texts.THRESH_STAY_EQUAL, "From which size", "switch rather than stay"),
+        (config.PEN_SWITCH, 0, texts.THRESH_SWITCH_SWITCHED, "How big", "stay instead"),      # 10 switches
+        (config.PEN_SWITCH, 10, texts.THRESH_SWITCH_STAYED, "How small", "switch instead"),   # 0 switches
+        (config.PEN_SWITCH, 5, texts.THRESH_SWITCH_EQUAL, "From which size", "stay rather than switch"),
+    ]
+    for block, stays, text, start, end in cases:
+        rec = _rec_with_part(block, stays)
+        sess.prepare_thresholds(rec, random.Random(2))
+        shown = texts.thresh_question(block, rec["thresholds"][block]["threshold_variant"])
+        assert shown == text and start in shown and end in shown, (block, stays)
+    assert "staying with your first choice" in texts.THRESH_STAY_STAYED
+    assert "switching to the other door" in texts.THRESH_SWITCH_SWITCHED
+
+
+def test_threshold_order_random_saved_and_stable():
+    orders = set()
+    for seed in range(40):
+        rec = _rec_with_part(config.PEN_STAY, 3)
+        sess.prepare_thresholds(rec, random.Random(seed))
+        order = tuple(rec["threshold_order"])
+        orders.add(order)
+        assert sorted(order) == ["pen_stay", "pen_switch"]
+        assert [rec["thresholds"][b]["position"] for b in order] == [1, 2]
+        sess.prepare_thresholds(rec, random.Random(seed + 99))   # second call changes nothing
+        assert tuple(rec["threshold_order"]) == order
+    assert len(orders) == 2   # both orders happen
+
+
+def test_threshold_answers_validated():
+    rec = _rec_with_part(config.PEN_STAY, 7)
+    sess.prepare_thresholds(rec, random.Random(3))
+    part = sess.record_threshold(rec, config.PEN_STAY, "number", 40)
+    assert part["threshold_value"] == 40 and part["threshold_type"] == "number" and part["answer_time"]
+    part = sess.record_threshold(rec, config.PEN_SWITCH, "always_stay", 55)
+    assert part["threshold_value"] is None and part["threshold_type"] == "always_stay"
+    assert sess.check_threshold("number", 0) == 0 and sess.check_threshold("number", 100) == 100
+    for bad in [("number", None), ("number", 101), ("number", -1), ("number", 12.5),
+                (None, 30), ("maybe", 30)]:
+        try:
+            sess.check_threshold(*bad)
+        except ValueError:
+            continue
+        raise AssertionError(f"accepted {bad}")
+
+
+def test_threshold_screen_order_and_resume():
+    order = sess.steps("real")
+    assert order.index("reason") < order.index("thresh") < order.index("demo")
+    assert order.index("belief_2") < order.index("prior") < order.index("thresh")
+    # play until the thresh screen, then "refresh": same order and texts come back
+    rec = _full_record("B")
+    assert rec["completed"] and rec["thresholds"] and rec["threshold_shown_time"]
+    rec2 = sess.new_record("RSM234", "pilot", "A")
+    rec2["trials"] = rec["trials"]
+    rec2["step"] = "reason"
+    sess.advance(rec2)                                   # enters "thresh"
+    assert rec2["step"] == "thresh" and rec2["threshold_order"]
+    reloaded = json.loads(json.dumps(rec2))              # what comes back from the file
+    sess.mark_resumed(reloaded)
+    assert reloaded["step"] == "thresh"
+    assert reloaded["threshold_order"] == rec2["threshold_order"]
+    assert reloaded["thresholds"] == rec2["thresholds"]
+
+
+def test_threshold_export_columns():
+    with tempfile.TemporaryDirectory() as d:
+        s = LocalStorage(d)
+        rec = _full_record("A", rng=random.Random(4))
+        s.save(rec)
+        out = os.path.join(d, "out")
+        export.export(os.path.join(d, "data", "pilot"), out)
+        import csv
+        with open(os.path.join(out, "participants.csv")) as f:
+            row = next(csv.DictReader(f))
+        assert row["threshold_order"] in ("pen_stay,pen_switch", "pen_switch,pen_stay")
+        for b in ("pen_stay", "pen_switch"):
+            part = rec["thresholds"][b]
+            assert row[f"{b}_threshold_type"] == part["threshold_type"]
+            assert row[f"{b}_threshold_variant"] == part["threshold_variant"]
+            assert int(row[f"{b}_stay_count"]) == part["stay_count"]
+            assert row[f"{b}_position"] in ("1", "2")
+            assert row[f"{b}_answer_time"]

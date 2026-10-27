@@ -386,6 +386,46 @@ def screen_reason():
     show_msg()
 
 
+def on_thresh():
+    if not on_step("thresh"):
+        return
+    answers = {}
+    for block in S.rec["threshold_order"]:
+        ttype = S.get(f"thresh_type_{block}")
+        value = S.get(f"thresh_val_{block}")
+        try:
+            sess.check_threshold(ttype, value)   # both must be complete before saving
+        except ValueError:
+            set_msg(texts.THRESH_MISSING)
+            return
+        answers[block] = (ttype, value)
+    for block, (ttype, value) in answers.items():
+        sess.record_threshold(S.rec, block, ttype, value)
+    go_next("thresh")
+
+
+def screen_thresh():
+    if not S.rec.get("threshold_order"):     # safety net for older files
+        sess.prepare_thresholds(S.rec)
+        S.need_save = True
+    st.header(texts.THRESH_HEADER)
+    st.info(texts.THRESH_NOTE)
+    for i, block in enumerate(S.rec["threshold_order"], start=1):
+        part = S.rec["thresholds"][block]
+        st.markdown(f"**{i}.** " + texts.thresh_question(block, part["threshold_variant"]))
+        # exactly one option; the number field only works with the first one
+        ttype = st.radio(texts.THRESH_NUMBER_LABEL, list(texts.THRESH_OPTIONS), index=None,
+                         format_func=texts.THRESH_OPTIONS.get, key=f"thresh_type_{block}",
+                         label_visibility="collapsed")
+        st.number_input(texts.THRESH_NUMBER_LABEL, min_value=0, max_value=100, step=1,
+                        value=None, placeholder=texts.BELIEF_PLACEHOLDER,
+                        key=f"thresh_val_{block}", disabled=ttype != "number")
+        if i == 1:
+            st.divider()
+    button(st, texts.NEXT, key="go_thresh", on_click=on_thresh)
+    show_msg()
+
+
 def on_demo():
     if not on_step("demo"):
         return
@@ -478,6 +518,8 @@ def main():
         screen_prior()
     elif step == "reason":
         screen_reason()
+    elif step == "thresh":
+        screen_thresh()
     elif step == "demo":
         screen_demo()
     elif step == "pilot_fb":

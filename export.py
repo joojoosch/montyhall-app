@@ -20,7 +20,10 @@ PARTICIPANT_FIELDS = [
     "pilot_feedback", "total_points", "n_trials",
     "comp_control_attempts", "comp_pen_switch_attempts", "comp_pen_stay_attempts",
     "comp_wrong", "assign_counts",
-]
+    "threshold_order", "threshold_shown_time",
+] + [f"{b}_{f}" for b in ("pen_stay", "pen_switch")
+     for f in ("threshold_value", "threshold_type", "threshold_variant", "stay_count",
+               "position", "answer_time")]
 TRIAL_FIELDS = [
     "participant_id", "sequence", "trial_overall", "block", "block_order",
     "trial_in_block", "trophy_door", "first_pick", "host_opened", "choice",
@@ -42,6 +45,12 @@ def participant_row(rec):
     row = {k: rec.get(k) for k in PARTICIPANT_FIELDS}
     row["n_trials"] = len(rec.get("trials", []))
     row["assign_counts"] = json.dumps(rec.get("assign_counts"))
+    # exploratory penalty questions: one set of columns per penalty part
+    order = rec.get("threshold_order")
+    row["threshold_order"] = ",".join(order) if order else None
+    for block, part in (rec.get("thresholds") or {}).items():
+        for f, v in part.items():
+            row[f"{block}_{f}"] = v
     comp = rec.get("comprehension", {})
     for block in ("control", "pen_switch", "pen_stay"):
         row[f"comp_{block}_attempts"] = comp.get(block, {}).get("attempts")

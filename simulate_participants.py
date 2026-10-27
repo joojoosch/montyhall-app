@@ -75,6 +75,10 @@ def make_participant(ptype, sequence, rng, mode="fake", dropout=False):
             rec["first_game_reason"] = rng.choices(
                 ["better_choice", "equal_chance", "try_out", "gut_feeling", "no_reason"],
                 [3, 3, 2, 3, 1])[0]
+        elif step == "thresh":
+            for block in rec["threshold_order"]:
+                ttype = rng.choices(list(sess.THRESH_TYPES), [6, 1, 1])[0]
+                sess.record_threshold(rec, block, ttype, rng.randint(0, 100))
         elif step == "demo":
             rec["age"] = rng.randint(19, 35)
             rec["gender"] = rng.choice(["female", "male", "diverse", "prefer not to say"])

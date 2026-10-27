@@ -18,7 +18,7 @@ def now_iso():
 def steps(mode):
     # screens after consent, in order
     s = ["prize", "rules_0", "block_0", "belief_1", "rules_1", "block_1",
-         "rules_2", "block_2", "belief_2", "prior", "reason", "demo"]
+         "rules_2", "block_2", "belief_2", "prior", "reason", "thresh", "demo"]
     if mode == "pilot":
         s.append("pilot_fb")
     s.append("end")
@@ -42,6 +42,10 @@ def new_record(pid, mode, sequence):
         "comprehension": {b: {"attempts": 0, "wrong": {}} for b, _, _ in plan},
         "prior_knowledge": None,
         "first_game_reason": None,
+        # exploratory penalty questions (filled when the "thresh" screen starts)
+        "threshold_order": None,      # e.g. ["pen_switch", "pen_stay"], random per person
+        "threshold_shown_time": None,
+        "thresholds": None,           # one answer per penalty part
         "age": None, "gender": None, "student_status": None, "field_of_study": None,
         "pilot_feedback": None,
         "total_points": 0,
@@ -58,6 +62,8 @@ def advance(rec):
     order = steps(rec["mode"])
     i = order.index(rec["step"])
     rec["step"] = order[min(i + 1, len(order) - 1)]
+    if rec["step"] == "thresh":
+        prepare_thresholds(rec)
     if rec["step"] == "end" and not rec["completed"]:
         rec["completed"] = True
         rec["end_time"] = now_iso()
@@ -130,3 +136,66 @@ def mark_resumed(rec):
     if rec["step"].startswith("block_") and block_finished(rec, block_index(rec["step"])):
         advance(rec)
     return rec
+
+
+# ---------- exploratory penalty questions ("thresh" screen) ----------
+# For each penalty part: how big the reduction would have to be for the person
+# to change what they usually did there. Asked after all choices and beliefs,
+# so it can't influence them. Not paid.
+
+THRESH_TYPES = ("number", "always_stay", "always_switch")
+
+
+def stay_count(rec, block):
+    # how often the person stayed in this part (out of 10)
+    return sum(1 for t in rec["trials"] if t["block"] == block and t["choice"] == "stay")
+
+
+def threshold_variant(stays, n=config.N_PENALTY):
+    # what they usually did: 6-10 stays -> stayed, 0-4 -> switched, 5 -> equal
+    switches = n - stays
+    if stays > switches:
+        return "stayed"
+    if switches > stays:
+        return "switched"
+    return "equal"
+
+
+def prepare_thresholds(rec, rng=None):
+    # Done once when the screen starts: random order + which text each part gets.
+    # Saved in the file, so a refresh shows exactly the same questions.
+    if rec.get("threshold_order"):
+        return rec
+    order = [config.PEN_STAY, config.PEN_SWITCH]
+    (rng or game._SYSTEM_RNG).shuffle(order)
+    rec["threshold_order"] = order
+    rec["threshold_shown_time"] = now_iso()
+    rec["thresholds"] = {}
+    for pos, block in enumerate(order, start=1):
+        stays = stay_count(rec, block)
+        rec["thresholds"][block] = {
+            "threshold_value": None,      # 0-100, only if threshold_type == "number"
+            "threshold_type": None,       # number / always_stay / always_switch
+            "threshold_variant": threshold_variant(stays),
+            "stay_count": stays,
+            "position": pos,              # 1 = shown first
+            "answer_time": None,
+        }
+    return rec
+
+
+def check_threshold(ttype, value):
+    # returns the value to save; raises ValueError if the answer is incomplete
+    if ttype not in THRESH_TYPES:
+        raise ValueError("choose one option")
+    if ttype == "number":
+        return game.validate_belief(value)   # same rule: whole number 0-100
+    return None                              # "always ..." has no number
+
+
+def record_threshold(rec, block, ttype, value):
+    part = rec["thresholds"][block]
+    part["threshold_value"] = check_threshold(ttype, value)
+    part["threshold_type"] = ttype
+    part["answer_time"] = now_iso()
+    return part
