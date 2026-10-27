@@ -16,7 +16,7 @@ NOT_OPEN = "The study isn't open yet. Please try again later."
 CONSENT_SHORT = """A short study for my bachelor thesis at the University of St. Gallen (HSG).
 
 - You play 25 rounds of a short game and answer a few questions (about 10 minutes).
-- You can win real money: two participants are drawn at random.
+- Your choices matter: two randomly drawn participants will be paid their game earnings in cash.
 - Your answers are anonymous. You don't need to give your name or email.
 - Taking part is voluntary, and you can stop at any time.
 - You must be at least 18 years old.
