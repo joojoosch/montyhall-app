@@ -145,13 +145,18 @@ div[data-testid="stHorizontalBlock"] > div { min-width: 0 !important; flex: 1 1 
 /* prize form button on the end screen: big and impossible to miss */
 div[data-testid="stLinkButton"], div[data-testid="stLinkButton"] a { width: 100% !important; }
 div[data-testid="stLinkButton"] a {
-  min-height: 3.6rem; font-size: 1.15rem; font-weight: 700; border-radius: 10px;
+  min-height: 3.6rem; font-size: 1.05rem; font-weight: 700; border-radius: 10px;
+  padding: 0.6rem 1rem; text-align: center; box-sizing: border-box;
   background: var(--gold) !important; color: var(--ink) !important; border: 2px solid var(--ink) !important;
   display: flex; align-items: center; justify-content: center; margin: 0.25rem 0 1rem;
-  text-decoration: none !important;
+  text-decoration: none !important; cursor: pointer;
+  box-shadow: 0 4px 0 var(--ink);                 /* looks like a real, pressable button */
+  transition: transform 0.08s, box-shadow 0.08s;
 }
-div[data-testid="stLinkButton"] a:hover { background: #F0C845 !important; }
-div[data-testid="stLinkButton"] a p { font-size: 1.15rem; font-weight: 700; }
+div[data-testid="stLinkButton"] a:hover { background: #F0C845 !important; transform: translateY(1px);
+  box-shadow: 0 3px 0 var(--ink); }
+div[data-testid="stLinkButton"] a:active { transform: translateY(4px); box-shadow: 0 0 0 var(--ink); }
+div[data-testid="stLinkButton"] a p { font-size: 1.05rem; font-weight: 700; text-align: center; margin: 0; }
 
 /* personal code on the end screen */
 .code { font-size: 2.2rem; font-weight: 700; letter-spacing: 0.15em; text-align: center;

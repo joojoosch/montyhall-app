@@ -306,7 +306,7 @@ END_CODE_LABEL = "Your personal code"
 END_TEXT = """If you want to take part in the prize draw, please write this code down
 now. It won't be shown again once you leave this page. Then enter it, together
 with your email, in the prize draw form:"""
-FORM_LINK = "Enter the prize draw (code + email)"
+FORM_LINK = "Click here to open the prize draw form ↗"
 END_TEXT_AFTER = """After the study, two participants are drawn at random from everyone who
 entered their code and contact details in this form. Your contact details are
 kept apart from your answers."""
