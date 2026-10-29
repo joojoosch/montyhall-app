@@ -465,14 +465,19 @@ def on_retry():
 
 
 def screen_end():
-    # a short clickable link (opens in a new tab, so the code stays visible)
-    link = f"[{texts.FORM_LINK}]({config.CONTACT_FORM_URL})" if config.CONTACT_FORM_URL else "[link missing]"
     st.header(texts.END_HEADER)
     st.markdown(texts.END_POINTS.format(points=S.rec["total_points"],
                                         chf=game.chf(S.rec["total_points"])))
     st.caption(texts.END_CODE_LABEL)
     html(f'<div class="code">{S.rec["participant_id"]}</div>')
-    st.markdown(texts.END_TEXT.format(link=link))
+    st.markdown(texts.END_TEXT)
+    # big button to the prize form (opens in a new tab, so the code stays visible)
+    if config.CONTACT_FORM_URL:
+        link_kw = {"width": "stretch"} if "width" in inspect.signature(st.link_button).parameters else {}
+        st.link_button(texts.FORM_LINK, config.CONTACT_FORM_URL, type="primary", **link_kw)
+    else:
+        st.error("[link missing]")
+    st.markdown(texts.END_TEXT_AFTER)
     if config.SHOW_DEBRIEF:
         st.info(texts.DEBRIEF)
     if not S.last_save_ok:

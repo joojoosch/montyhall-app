@@ -142,6 +142,17 @@ div[data-testid="stHorizontalBlock"] > div { min-width: 0 !important; flex: 1 1 
   .result.win .big, .wallet .gain, .door.trophy.won { animation: none; }
 }
 
+/* prize form button on the end screen: big and impossible to miss */
+div[data-testid="stLinkButton"], div[data-testid="stLinkButton"] a { width: 100% !important; }
+div[data-testid="stLinkButton"] a {
+  min-height: 3.6rem; font-size: 1.15rem; font-weight: 700; border-radius: 10px;
+  background: var(--gold) !important; color: var(--ink) !important; border: 2px solid var(--ink) !important;
+  display: flex; align-items: center; justify-content: center; margin: 0.25rem 0 1rem;
+  text-decoration: none !important;
+}
+div[data-testid="stLinkButton"] a:hover { background: #F0C845 !important; }
+div[data-testid="stLinkButton"] a p { font-size: 1.15rem; font-weight: 700; }
+
 /* personal code on the end screen */
 .code { font-size: 2.2rem; font-weight: 700; letter-spacing: 0.15em; text-align: center;
   background: #fff; border: 2px dashed var(--door); border-radius: 12px; padding: 0.75rem; margin: 0.5rem 0 1rem; }

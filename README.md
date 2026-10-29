@@ -40,6 +40,22 @@ Streamlit reloads `app.py` after a push, but can keep other files (like
 `texts.py` or `config.py`) in memory. So after every push: share.streamlit.io
 -> three dots next to the app -> **Reboot app**, then check in a private window.
 
+## Prize draw (after 8 Nov)
+1. Microsoft Forms -> Responses -> Open in Excel -> save as `prize_form.xlsx`.
+2. Download the data repo (Code -> Download ZIP).
+3. Pick a seed BEFORE looking at the entries (e.g. the date: 20261109), then:
+```
+python draw_winners.py prize_form.xlsx montyhall-data-main/data/real --seed 20261109
+```
+Only codes from the form that belong to a FINISHED participant count, each once.
+The same files + the same seed always give the same winners.
+
+## Keeping the app awake
+`.github/workflows/keep-awake.yml` opens https://gamestudy.streamlit.app/ every
+4 hours (GitHub Actions) and clicks "wake up" if it's asleep. It only looks at
+the first page, so it never creates data. Test it once: GitHub -> Actions ->
+keep-awake -> Run workflow.
+
 ## Pilot → real
 In `config.py` set `MODE = "real"` and commit. Before that, fill `CONSENT_TEXT` in `texts.py` and `CONTACT_FORM_URL` in `config.py`: in real mode the app refuses to start while placeholders are left or the GitHub secrets are missing. Pilot data stays in `data/pilot/`, real data goes to `data/real/`.
 

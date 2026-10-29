@@ -457,3 +457,31 @@ def test_threshold_export_columns():
             assert int(row[f"{b}_stay_count"]) == part["stay_count"]
             assert row[f"{b}_position"] in ("1", "2")
             assert row[f"{b}_answer_time"]
+
+
+# ---------- prize draw ----------
+
+def test_draw_winners_valid_tickets_and_repeatable():
+    import draw_winners as dw
+    with tempfile.TemporaryDirectory() as d:
+        s = LocalStorage(d)
+        codes = []
+        for i, seq in enumerate("ABAB"):
+            rec = _full_record(seq, rng=random.Random(20 + i))
+            s.save(rec)
+            codes.append(rec["participant_id"])
+        unfinished = sess.new_record("UNF234", "real", "A")
+        s.save(unfinished)
+        folder = os.path.join(d, "data", "pilot")
+        done = dw.load_completed(folder)
+        assert set(done) == set(codes)
+        entries = [{"raw": f" {codes[0].lower()} ", "code": dw.clean_code(f" {codes[0].lower()} "), "email": "a@x"},
+                   {"raw": codes[1], "code": codes[1], "email": "b@x"},
+                   {"raw": codes[1], "code": codes[1], "email": "b2@x"},       # twice
+                   {"raw": "UNF234", "code": "UNF234", "email": "c@x"},        # not finished
+                   {"raw": "AB", "code": "AB", "email": "d@x"}]                # typo
+        valid, problems, dup = dw.check_entries(entries, done)
+        assert set(valid) == {codes[0], codes[1]}
+        assert len(problems) == 2 and codes[1] in dup
+        assert dw.draw(valid, seed=7) == dw.draw(valid, seed=7)              # repeatable
+        assert sorted(dw.draw(valid, seed=7)) == sorted(valid)               # 2 tickets -> both win

@@ -298,13 +298,14 @@ PILOT_QUESTION = "Was anything unclear or confusing?"
 END_HEADER = "Thank you!"
 END_POINTS = "You collected **{points} points**. If you are drawn, you get **{chf}**."
 END_CODE_LABEL = "Your personal code"
-FORM_LINK = "Open the prize draw form"
-END_TEXT = """If you want to take part in the prize draw, please write this code
-down now. It won't be shown again once you leave this page. After the study,
-two participants are drawn at random from everyone who entered their code and
-contact details in this separate form: {link}
-
-Your contact details are kept apart from your answers."""
+# The prize form is a big button right under the code (pilot: a text link was easy to miss)
+END_TEXT = """If you want to take part in the prize draw, please write this code down
+now. It won't be shown again once you leave this page. Then enter it, together
+with your email, in the prize draw form:"""
+FORM_LINK = "Enter the prize draw (code + email)"
+END_TEXT_AFTER = """After the study, two participants are drawn at random from everyone who
+entered their code and contact details in this form. Your contact details are
+kept apart from your answers."""
 DEBRIEF = """About this study: in the three-door game, switching wins in
 2 out of 3 games. We wanted to know why many people stay with their first door."""
 
