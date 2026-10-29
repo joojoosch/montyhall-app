@@ -200,6 +200,10 @@ that the trophy is behind the **closed door you did not pick**?
 
 Answer from your feeling while playing. Don't calculate.
 (Your answer does not affect your points.)"""
+# second time only (after game 25): same question, plus a neutral intro
+BELIEF2_HEADER = "The same question again"
+BELIEF2_INTRO = ("You have now played all 25 games. Please answer this question again, "
+                 "from your feeling now. Your answer can be the same as before or different.")
 BELIEF_LABEL = "Your answer in %"
 BELIEF_PLACEHOLDER = "0 to 100"
 BELIEF_MISSING = "Please enter a whole number from 0 to 100."

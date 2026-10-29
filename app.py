@@ -340,7 +340,11 @@ def on_belief(num):
 
 
 def screen_belief(num):
-    st.header(texts.BELIEF_HEADER)
+    if num == 2:   # same question as after game 5, with a short neutral intro
+        st.header(texts.BELIEF2_HEADER)
+        st.markdown(texts.BELIEF2_INTRO)
+    else:
+        st.header(texts.BELIEF_HEADER)
     st.markdown(texts.BELIEF_QUESTION)
     # value=None: empty field, so nobody is anchored on a default number
     st.number_input(texts.BELIEF_LABEL, min_value=0, max_value=100, step=1, value=None,
